@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, Linking, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -224,7 +225,8 @@ function PresenceExercise({ onBack }: { onBack: () => void }) {
 
 function CrisisFooter() {
   const handleCall988 = () => Linking.openURL("tel:988");
-  const handleTextCrisis = () => Linking.openURL("sms:741741&body=HOME");
+  const handleTextCrisis = () =>
+    Linking.openURL(Platform.OS === "ios" ? "sms:741741&body=HOME" : "sms:741741?body=HOME");
 
   return (
     <View className="border-t border-bg-surface px-lg pb-12 pt-md">
@@ -253,7 +255,7 @@ export default function SOSScreen() {
 
   if (!selectedMode) {
     return (
-      <View className="flex-1 bg-bg-primary">
+      <SafeAreaView className="flex-1 bg-bg-primary">
         <Animated.View entering={FadeIn.duration(400)} className="flex-1 items-center justify-center px-lg">
           <Text className="mb-xl text-h1 font-inter-semibold text-text-primary">
             What do you need right now?
@@ -301,37 +303,37 @@ export default function SOSScreen() {
             </Text>
           </Pressable>
 
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.back()} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
             <Text className="text-body text-text-tertiary">← Go back</Text>
           </Pressable>
         </Animated.View>
 
         <CrisisFooter />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (selectedMode === "overwhelm") {
     return (
-      <View className="flex-1" style={{ backgroundColor: "#0C1120" }}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: "#0C1120" }}>
         <GroundingExercise onBack={() => setSelectedMode(null)} />
         <CrisisFooter />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (selectedMode === "distress") {
     return (
-      <View className="flex-1" style={{ backgroundColor: "#0C1120" }}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: "#0C1120" }}>
         <PresenceExercise onBack={() => setSelectedMode(null)} />
         <CrisisFooter />
-      </View>
+      </SafeAreaView>
     );
   }
 
   // Panic mode — breathing circle
   return (
-    <View className="flex-1" style={{ backgroundColor: "#0C1120" }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: "#0C1120" }}>
       <Animated.View entering={FadeIn.duration(800)} className="flex-1 items-center justify-center">
         <Text className="mb-md text-h1 font-inter-semibold text-text-primary">
           {config!.title}
@@ -344,13 +346,13 @@ export default function SOSScreen() {
           <Pressable onPress={() => setSelectedMode(null)} className="mb-md items-center">
             <Text className="text-body text-text-secondary">Try something else</Text>
           </Pressable>
-          <Pressable onPress={() => router.back()} className="items-center">
+          <Pressable onPress={() => router.back()} className="items-center" style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
             <Text className="text-body text-text-tertiary">← Close</Text>
           </Pressable>
         </View>
       </Animated.View>
 
       <CrisisFooter />
-    </View>
+    </SafeAreaView>
   );
 }

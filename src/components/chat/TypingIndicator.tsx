@@ -41,7 +41,7 @@ function Dot({ delay }: { delay: number }) {
 
 export default function TypingIndicator() {
   return (
-    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} className="mb-sm flex-row items-end">
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} className="mb-sm flex-row items-end" accessibilityLabel="Lumis is typing" accessibilityRole="text">
       <View className="mr-sm">
         <CompanionAvatar size="small" expression="curious" />
       </View>

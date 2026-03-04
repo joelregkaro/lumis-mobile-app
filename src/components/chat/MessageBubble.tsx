@@ -6,21 +6,21 @@ import ExerciseCardView from "@/components/chat/ExerciseCardView";
 import type { ChatMessage } from "@/types/chat";
 
 const mdStyles = {
-  body: { color: "#F4F4F5", fontSize: 15, lineHeight: 22 },
+  body: { color: "#EAEDF3", fontSize: 15, lineHeight: 22 },
   paragraph: { marginTop: 0, marginBottom: 6 },
-  strong: { color: "#F4F4F5", fontWeight: "700" as const },
+  strong: { color: "#EAEDF3", fontWeight: "700" as const },
   em: { color: "#D4D4D8", fontStyle: "italic" as const },
-  heading1: { color: "#F4F4F5", fontSize: 18, fontWeight: "700" as const, marginTop: 8, marginBottom: 4 },
-  heading2: { color: "#F4F4F5", fontSize: 17, fontWeight: "600" as const, marginTop: 6, marginBottom: 4 },
-  heading3: { color: "#F4F4F5", fontSize: 16, fontWeight: "600" as const, marginTop: 4, marginBottom: 2 },
+  heading1: { color: "#EAEDF3", fontSize: 18, fontWeight: "700" as const, marginTop: 8, marginBottom: 4 },
+  heading2: { color: "#EAEDF3", fontSize: 17, fontWeight: "600" as const, marginTop: 6, marginBottom: 4 },
+  heading3: { color: "#EAEDF3", fontSize: 16, fontWeight: "600" as const, marginTop: 4, marginBottom: 2 },
   bullet_list: { marginVertical: 4 },
   ordered_list: { marginVertical: 4 },
   list_item: { marginVertical: 2 },
   bullet_list_icon: { color: "#A78BFA", fontSize: 14, lineHeight: 22, marginRight: 6 },
   ordered_list_icon: { color: "#A78BFA", fontSize: 14, lineHeight: 22, marginRight: 6 },
-  code_inline: { backgroundColor: "#27272A", color: "#2DD4BF", paddingHorizontal: 4, borderRadius: 4, fontSize: 13 },
-  fence: { backgroundColor: "#27272A", borderRadius: 8, padding: 12, marginVertical: 6, color: "#D4D4D8", fontSize: 13 },
-  blockquote: { backgroundColor: "#1A1A24", borderLeftWidth: 3, borderLeftColor: "#8B5CF6", paddingLeft: 12, paddingVertical: 4, marginVertical: 6 },
+  code_inline: { backgroundColor: "#242A42", color: "#2DD4BF", paddingHorizontal: 4, borderRadius: 4, fontSize: 13 },
+  fence: { backgroundColor: "#242A42", borderRadius: 8, padding: 12, marginVertical: 6, color: "#D4D4D8", fontSize: 13 },
+  blockquote: { backgroundColor: "#1A1A24", borderLeftWidth: 3, borderLeftColor: "#7C3AED", paddingLeft: 12, paddingVertical: 4, marginVertical: 6 },
   link: { color: "#A78BFA" },
   hr: { backgroundColor: "#3F3F46", height: 1, marginVertical: 8 },
 };
@@ -60,7 +60,7 @@ export default function MessageBubble({ message, showAvatar = false }: Props) {
           style={{
             paddingHorizontal: 14,
             paddingVertical: 10,
-            backgroundColor: isUser ? "#8B5CF6" : "#1E1E27",
+            backgroundColor: isUser ? "#7C3AED" : "#1A1F35",
             borderTopLeftRadius: isUser ? 18 : 4,
             borderTopRightRadius: isUser ? 4 : 18,
             borderBottomLeftRadius: 18,
@@ -75,7 +75,7 @@ export default function MessageBubble({ message, showAvatar = false }: Props) {
             <View>
               <Markdown style={mdStyles}>{message.content || " "}</Markdown>
               {message.isStreaming && (
-                <Text style={{ color: "#71717A", fontSize: 15 }}> ●</Text>
+                <Text style={{ color: "#5A6178", fontSize: 15 }}> ●</Text>
               )}
             </View>
           )}
@@ -84,7 +84,7 @@ export default function MessageBubble({ message, showAvatar = false }: Props) {
         {time && (
           <Text style={{
             fontSize: 10,
-            color: "#52525B",
+            color: "#5A6178",
             marginTop: 3,
             textAlign: isUser ? "right" : "left",
             marginHorizontal: 4,

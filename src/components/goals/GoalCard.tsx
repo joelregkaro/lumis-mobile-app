@@ -35,7 +35,7 @@ function getDueStatus(targetDate: string | null): { label: string; color: string
   if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: "#F87171" };
   if (diffDays === 0) return { label: "Due today", color: "#FBBF24" };
   if (diffDays <= 7) return { label: `${diffDays}d left`, color: "#FBBF24" };
-  return { label: due.toLocaleDateString("en-US", { month: "short", day: "numeric" }), color: "#71717A" };
+  return { label: due.toLocaleDateString("en-US", { month: "short", day: "numeric" }), color: "#5A6178" };
 }
 
 export default function GoalCard({ goal, index, onComplete, onPause, compact }: GoalCardProps) {
@@ -50,7 +50,7 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
       style={{
         marginBottom: 8,
         borderRadius: 12,
-        backgroundColor: "#16161D",
+        backgroundColor: "#1A1F35",
         padding: 14,
       }}
     >
@@ -58,12 +58,12 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ marginRight: 6 }}>{emoji}</Text>
-            <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "#F4F4F5" }}>
+            <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "#EAEDF3" }}>
               {goal.title}
             </Text>
           </View>
           {goal.description && !compact && (
-            <Text style={{ fontSize: 13, color: "#A1A1AA", marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
+            <Text style={{ fontSize: 13, color: "#8B92A8", marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
               {goal.description}
             </Text>
           )}
@@ -76,7 +76,9 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
                 await hapticSuccess();
                 onComplete(goal.id);
               }}
-              style={{ backgroundColor: "#14B8A620", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
+              style={{ backgroundColor: "#14B8A620", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6 }}
+              accessibilityLabel="Mark goal as complete"
+              accessibilityRole="button"
             >
               <Text style={{ fontSize: 13, color: "#2DD4BF" }}>✓</Text>
             </Pressable>
@@ -85,9 +87,11 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
                 await hapticLight();
                 onPause(goal.id);
               }}
-              style={{ backgroundColor: "#27272A", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
+              style={{ backgroundColor: "#242A42", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 6 }}
+              accessibilityLabel="Pause goal"
+              accessibilityRole="button"
             >
-              <Text style={{ fontSize: 13, color: "#71717A" }}>⏸</Text>
+              <Text style={{ fontSize: 13, color: "#5A6178" }}>⏸</Text>
             </Pressable>
           </View>
         )}
@@ -97,11 +101,11 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
       {progressPct > 0 && (
         <View style={{ marginTop: 10 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ fontSize: 11, color: "#71717A" }}>Progress</Text>
+            <Text style={{ fontSize: 11, color: "#5A6178" }}>Progress</Text>
             <Text style={{ fontSize: 11, color: "#A78BFA", fontWeight: "600" }}>{progressPct}%</Text>
           </View>
-          <View style={{ height: 4, backgroundColor: "#27272A", borderRadius: 2, overflow: "hidden" }}>
-            <View style={{ height: 4, width: `${Math.min(progressPct, 100)}%`, backgroundColor: "#8B5CF6", borderRadius: 2 }} />
+          <View style={{ height: 4, backgroundColor: "#242A42", borderRadius: 2, overflow: "hidden" }}>
+            <View style={{ height: 4, width: `${Math.min(progressPct, 100)}%`, backgroundColor: "#7C3AED", borderRadius: 2 }} />
           </View>
         </View>
       )}
@@ -115,7 +119,7 @@ export default function GoalCard({ goal, index, onComplete, onPause, compact }: 
             </View>
           )}
           {progress?.note && (
-            <Text style={{ flex: 1, fontSize: 11, color: "#71717A", fontStyle: "italic" }} numberOfLines={1}>
+            <Text style={{ flex: 1, fontSize: 11, color: "#5A6178", fontStyle: "italic" }} numberOfLines={1}>
               "{progress.note}"
             </Text>
           )}

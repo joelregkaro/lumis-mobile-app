@@ -337,15 +337,21 @@ export default function GrowthScreen() {
         )}
 
         {/* Habit Tracker */}
-        {habits.filter((h) => h.status === "active").length > 0 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ backgroundColor: "#16161D", borderRadius: 16, padding: 16, marginBottom: 20 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-              <Ionicons name="refresh-outline" size={16} color="#2DD4BF" style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", letterSpacing: 0.5, textTransform: "uppercase" }}>
-                Habits
+        <Animated.View entering={FadeInDown.duration(400)} style={{ backgroundColor: "#16161D", borderRadius: 16, padding: 16, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+            <Ionicons name="refresh-outline" size={16} color="#2DD4BF" style={{ marginRight: 6 }} />
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Habits
+            </Text>
+          </View>
+          {habits.filter((h) => h.status === "active").length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+              <Text style={{ fontSize: 14, color: "#71717A", textAlign: "center" }}>
+                No habits yet — add one from your home screen
               </Text>
             </View>
-            {habits.filter((h) => h.status === "active").map((habit) => (
+          ) : (
+            habits.filter((h) => h.status === "active").map((habit) => (
               <View key={habit.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: "#27272A40" }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: "500", color: "#F4F4F5" }}>{habit.title}</Text>
@@ -374,9 +380,9 @@ export default function GrowthScreen() {
                   </Text>
                 </View>
               </View>
-            ))}
-          </Animated.View>
-        )}
+            ))
+          )}
+        </Animated.View>
 
         {/* Discover Your Type Banner */}
         <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 20 }}>

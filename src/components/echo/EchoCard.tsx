@@ -43,7 +43,7 @@ export default function EchoCard({ echo, index, onComplete, onSkip }: EchoCardPr
           {isCommitment ? "Commitment" : "Session Echo"}
         </Text>
         {isCommitment && echo.committed_for && (
-          <Text style={{ fontSize: 11, color: "#60A5FA", marginLeft: "auto" }}>
+          <Text style={{ fontSize: 11, color: "#8B92A8", marginLeft: "auto" }}>
             {new Date(echo.committed_for).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </Text>
         )}
@@ -64,7 +64,7 @@ export default function EchoCard({ echo, index, onComplete, onSkip }: EchoCardPr
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#8B5CF620",
+            backgroundColor: "#7C3AED20",
             borderRadius: 8,
             paddingVertical: 10,
           }}

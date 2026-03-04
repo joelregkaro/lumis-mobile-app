@@ -6,11 +6,11 @@ import { useMoodStore } from "@/store/mood";
 import { hapticLight } from "@/lib/haptics";
 
 const MOOD_EMOJIS = [
-  { score: 1, emoji: "😔", label: "Heavy" },
-  { score: 2, emoji: "😕", label: "Low" },
-  { score: 3, emoji: "😐", label: "Okay" },
-  { score: 4, emoji: "🙂", label: "Good" },
-  { score: 5, emoji: "😊", label: "Light" },
+  { score: 2, emoji: "😔", label: "Heavy" },
+  { score: 4, emoji: "😕", label: "Tough" },
+  { score: 6, emoji: "😐", label: "Okay" },
+  { score: 8, emoji: "🙂", label: "Good" },
+  { score: 10, emoji: "😊", label: "Great" },
 ];
 
 interface Props {
@@ -92,6 +92,8 @@ export default function SessionCoolDown({ session, onDismiss }: Props) {
                   key={score}
                   onPress={() => handleMoodSelect(score)}
                   className="items-center"
+                  accessibilityLabel={`Rate mood: ${label}`}
+                  accessibilityRole="button"
                 >
                   <Text className="text-2xl">{emoji}</Text>
                   <Text className="mt-1 text-xs text-text-tertiary">{label}</Text>

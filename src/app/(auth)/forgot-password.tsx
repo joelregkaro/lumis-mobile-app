@@ -20,7 +20,10 @@ export default function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
 
   const handleReset = async () => {
-    if (!email.trim()) return;
+    if (!email.trim()) {
+      Alert.alert("Email required", "Please enter your email address.");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim());

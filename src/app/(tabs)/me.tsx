@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { Paths, File as ExpoFile } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useRouter } from "expo-router";
@@ -136,6 +137,8 @@ export default function MeScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingVision, setEditingVision] = useState(false);
   const [visionText, setVisionText] = useState(profile?.future_self_vision ?? "");
+  const [editingName, setEditingName] = useState(false);
+  const [nameText, setNameText] = useState(profile?.display_name ?? "");
 
   useEffect(() => {
     fetchMemoryDoc();
@@ -239,6 +242,96 @@ export default function MeScreen() {
           <Text style={{ fontSize: 14, color: "#71717A" }}>
             Transparent and fully yours.
           </Text>
+        </View>
+
+        {/* Upgrade CTA Banner */}
+        {!isPro && (
+          <Pressable onPress={() => router.push("/paywall")} style={{ marginHorizontal: 20, marginBottom: 20 }}>
+            <LinearGradient
+              colors={["#7C3AED", "#0D9488"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 16, padding: 20 }}
+            >
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "white", marginBottom: 4 }}>
+                Unlock Your Growth
+              </Text>
+              <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", marginBottom: 14 }}>
+                Unlimited sessions, deeper insights, and pattern recognition
+              </Text>
+              <View style={{
+                alignSelf: "flex-start",
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: 10,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+              }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "white" }}>
+                  Start Free Trial →
+                </Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        )}
+
+        {/* Edit Profile */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <View style={{ backgroundColor: "#16161D", borderRadius: 16, padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+              <Ionicons name="person-circle-outline" size={18} color="#A1A1AA" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: "#71717A", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                Edit Profile
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ fontSize: 14, color: "#A1A1AA", marginRight: 8, width: 48 }}>Name</Text>
+              {editingName ? (
+                <TextInput
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#1E1E27",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 14,
+                    color: "#F4F4F5",
+                    borderWidth: 1,
+                    borderColor: "#8B5CF640",
+                  }}
+                  value={nameText}
+                  onChangeText={setNameText}
+                  autoFocus
+                  returnKeyType="done"
+                  onBlur={async () => {
+                    const trimmed = nameText.trim();
+                    if (trimmed && trimmed !== profile?.display_name) {
+                      await supabase.from("users").update({ display_name: trimmed }).eq("id", profile!.id);
+                      await fetchProfile();
+                    }
+                    setEditingName(false);
+                  }}
+                  onSubmitEditing={async () => {
+                    const trimmed = nameText.trim();
+                    if (trimmed && trimmed !== profile?.display_name) {
+                      await supabase.from("users").update({ display_name: trimmed }).eq("id", profile!.id);
+                      await fetchProfile();
+                    }
+                    setEditingName(false);
+                  }}
+                />
+              ) : (
+                <Pressable
+                  onPress={() => { setNameText(profile?.display_name ?? ""); setEditingName(true); }}
+                  style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Text style={{ fontSize: 14, color: "#F4F4F5" }}>
+                    {profile?.display_name || "Set your name"}
+                  </Text>
+                  <Ionicons name="create-outline" size={16} color="#71717A" />
+                </Pressable>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* View Toggle */}

@@ -77,10 +77,10 @@ export default function VoiceNoteButton() {
   if (isUploading) {
     return (
       <Animated.View entering={FadeIn} exiting={FadeOut} style={{ alignItems: "center" }}>
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#1E1E27", alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#1A1F35", alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="small" color="#A78BFA" />
         </View>
-        <Text style={{ fontSize: 13, color: "#71717A", marginTop: 8 }}>Saving</Text>
+        <Text style={{ fontSize: 13, color: "#5A6178", marginTop: 8 }}>Saving</Text>
       </Animated.View>
     );
   }
@@ -104,7 +104,7 @@ export default function VoiceNoteButton() {
           <Ionicons name={isRecording ? "stop" : "mic-outline"} size={22} color={isRecording ? "#F87171" : "#F472B6"} />
         </Animated.View>
       </Pressable>
-      <Text style={{ fontSize: 13, color: "#A1A1AA", marginTop: 8, fontWeight: "500" }}>
+      <Text style={{ fontSize: 13, color: "#8B92A8", marginTop: 8, fontWeight: "500" }}>
         {isRecording ? formatTime(duration) : "Voice Note"}
       </Text>
     </View>

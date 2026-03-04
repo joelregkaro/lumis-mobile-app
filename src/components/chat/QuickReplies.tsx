@@ -24,7 +24,10 @@ export default function QuickReplies({ replies, onSelect }: Props) {
         <Animated.View key={reply} entering={FadeInDown.delay(i * 50).duration(250)}>
           <Pressable
             onPress={() => handlePress(reply)}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             className="rounded-full border border-brand-purple px-4 py-2"
+            accessibilityRole="button"
+            accessibilityLabel={reply}
           >
             <Text className="text-body text-brand-purple-light">{reply}</Text>
           </Pressable>

@@ -37,8 +37,8 @@ export default function MoodCheckIn({ onComplete }: Props) {
   };
 
   return (
-    <View style={{ backgroundColor: "#16161D", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#27272A40" }}>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: "#F4F4F5", marginBottom: 16 }}>
+    <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#242A4240" }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: "#EAEDF3", marginBottom: 16 }}>
         How are you feeling?
       </Text>
 
@@ -52,14 +52,14 @@ export default function MoodCheckIn({ onComplete }: Props) {
                 borderRadius: 26,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: selected === mood.score ? "#8B5CF620" : "transparent",
+                backgroundColor: selected === mood.score ? "#7C3AED20" : "transparent",
                 borderWidth: selected === mood.score ? 2 : 0,
-                borderColor: "#8B5CF6",
+                borderColor: "#7C3AED",
               }}
             >
               <Text style={{ fontSize: 28 }}>{mood.emoji}</Text>
             </View>
-            <Text style={{ fontSize: 11, color: selected === mood.score ? "#A78BFA" : "#71717A", marginTop: 6, fontWeight: selected === mood.score ? "600" : "400" }}>
+            <Text style={{ fontSize: 11, color: selected === mood.score ? "#A78BFA" : "#5A6178", marginTop: 6, fontWeight: selected === mood.score ? "600" : "400" }}>
               {mood.label}
             </Text>
           </Pressable>
@@ -71,13 +71,13 @@ export default function MoodCheckIn({ onComplete }: Props) {
           {/* Energy */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: "#A1A1AA" }}>Energy</Text>
+              <Text style={{ fontSize: 13, color: "#8B92A8" }}>Energy</Text>
               <Text style={{ fontSize: 13, color: "#2DD4BF", fontWeight: "600" }}>{energy}/10</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 3 }}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
-                <Pressable key={v} onPress={() => setEnergy(v)} style={{ flex: 1 }} accessibilityLabel={`Energy level ${v}`} accessibilityRole="button">
-                  <View style={{ height: 6, borderRadius: 3, backgroundColor: v <= energy ? "#14B8A6" : "#27272A" }} />
+                <Pressable key={v} onPress={() => setEnergy(v)} style={{ flex: 1, paddingVertical: 8 }} accessibilityLabel={`Energy level ${v}`} accessibilityRole="button">
+                  <View style={{ height: 12, borderRadius: 6, backgroundColor: v <= energy ? "#14B8A6" : "#242A42" }} />
                 </Pressable>
               ))}
             </View>
@@ -86,13 +86,13 @@ export default function MoodCheckIn({ onComplete }: Props) {
           {/* Anxiety */}
           <View style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: "#A1A1AA" }}>Anxiety</Text>
+              <Text style={{ fontSize: 13, color: "#8B92A8" }}>Anxiety</Text>
               <Text style={{ fontSize: 13, color: "#C084FC", fontWeight: "600" }}>{anxiety}/10</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 3 }}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
-                <Pressable key={v} onPress={() => setAnxiety(v)} style={{ flex: 1 }} accessibilityLabel={`Anxiety level ${v}`} accessibilityRole="button">
-                  <View style={{ height: 6, borderRadius: 3, backgroundColor: v <= anxiety ? "#A78BFA" : "#27272A" }} />
+                <Pressable key={v} onPress={() => setAnxiety(v)} style={{ flex: 1, paddingVertical: 8 }} accessibilityLabel={`Anxiety level ${v}`} accessibilityRole="button">
+                  <View style={{ height: 12, borderRadius: 6, backgroundColor: v <= anxiety ? "#A78BFA" : "#242A42" }} />
                 </Pressable>
               ))}
             </View>
@@ -104,7 +104,7 @@ export default function MoodCheckIn({ onComplete }: Props) {
               alignItems: "center",
               borderRadius: 12,
               paddingVertical: 12,
-              backgroundColor: "#8B5CF6",
+              backgroundColor: "#7C3AED",
             }}
             accessibilityLabel="Submit mood check-in"
             accessibilityRole="button"

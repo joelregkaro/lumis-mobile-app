@@ -126,13 +126,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.75)",
   },
   card: {
-    backgroundColor: "#16161D",
+    backgroundColor: "#1A1F35",
     borderRadius: 24,
     padding: 32,
     alignItems: "center",
     marginHorizontal: 32,
     borderWidth: 1,
-    borderColor: "#FBBF2440",
+    borderColor: "#F5C54240",
   },
   emoji: {
     fontSize: 48,
@@ -141,20 +141,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#FBBF24",
+    color: "#F5C542",
     textAlign: "center",
     marginTop: 16,
   },
   subtitle: {
     fontSize: 15,
-    color: "#A1A1AA",
+    color: "#8B92A8",
     textAlign: "center",
     marginTop: 8,
     lineHeight: 22,
   },
   button: {
     marginTop: 24,
-    backgroundColor: "#FBBF2420",
+    backgroundColor: "#F5C54220",
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 16,
@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FBBF24",
+    color: "#F5C542",
   },
 });

@@ -104,6 +104,40 @@ export default function PaywallScreen() {
             ))}
           </Animated.View>
 
+          {/* Social Proof */}
+          <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ alignItems: "center", marginBottom: 24 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              {[
+                { bg: "#7C3AED", initials: "AK" },
+                { bg: "#0D9488", initials: "RJ" },
+                { bg: "#EC4899", initials: "ML" },
+                { bg: "#F59E0B", initials: "TS" },
+                { bg: "#3B82F6", initials: "DP" },
+              ].map((u, i) => (
+                <View
+                  key={i}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: u.bg,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: i === 0 ? 0 : -8,
+                    borderWidth: 2,
+                    borderColor: "#0C1120",
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "white" }}>{u.initials}</Text>
+                </View>
+              ))}
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#FBBF24", marginLeft: 10 }}>4.8★</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: "#A1A1AA", textAlign: "center" }}>
+              Join 2,000+ people on their growth journey
+            </Text>
+          </Animated.View>
+
           {/* Plan Toggle */}
           <Animated.View entering={FadeInDown.delay(400).duration(400)} style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -120,8 +154,13 @@ export default function PaywallScreen() {
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ fontSize: 13, fontWeight: "600", color: "#A78BFA" }}>ANNUAL</Text>
-                  <View style={{ backgroundColor: "#22C55E20", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#22C55E" }}>SAVE 44%</Text>
+                  <View style={{ flexDirection: "row", gap: 4 }}>
+                    <View style={{ backgroundColor: "#8B5CF620", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#A78BFA" }}>MOST POPULAR</Text>
+                    </View>
+                    <View style={{ backgroundColor: "#22C55E20", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#22C55E" }}>SAVE 44%</Text>
+                    </View>
                   </View>
                 </View>
                 <Text style={{ fontSize: 22, fontWeight: "700", color: "#F4F4F5", marginTop: 8 }}>
@@ -149,6 +188,13 @@ export default function PaywallScreen() {
               </Pressable>
             </View>
           </Animated.View>
+        </View>
+
+        {/* Guarantee */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 12, color: "#71717A", textAlign: "center" }}>
+            14-day money-back guarantee · Cancel anytime
+          </Text>
         </View>
 
         {/* CTA */}
