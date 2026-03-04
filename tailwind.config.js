@@ -1,0 +1,90 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      colors: {
+        bg: {
+          primary: "#0C1120",
+          surface: "#1A1F35",
+          elevated: "#242A42",
+        },
+        brand: {
+          purple: "#7C3AED",
+          "purple-light": "#A78BFA",
+          teal: "#2DD4BF",
+          gold: "#F5C542",
+        },
+        text: {
+          primary: "#EAEDF3",
+          secondary: "#8B92A8",
+          tertiary: "#5A6178",
+        },
+        bubble: {
+          ai: "#1E2440",
+          user: "#7C3AED",
+        },
+        status: {
+          success: "#22C55E",
+          warning: "#F59E0B",
+          crisis: "#E07373",
+        },
+        mood: {
+          struggling: "#8B7EC8",
+          tough: "#A8A0D6",
+          low: "#7E9CC7",
+          neutral: "#B8C5D6",
+          okay: "#94C5B5",
+          good: "#A8D5BA",
+          energized: "#C5D7A0",
+          great: "#7CB8A0",
+        },
+        light: {
+          bg: "#F8F6F3",
+          surface: "#FFFFFF",
+          elevated: "#F0EDE8",
+          purple: "#6C2BD9",
+          teal: "#0D9488",
+          amber: "#D4A574",
+          "text-1": "#1A1A2E",
+          "text-2": "#5A5A6E",
+          "text-3": "#8B8B9E",
+          "bubble-ai": "#F0EDE8",
+          "bubble-user": "#6C2BD9",
+          crisis: "#C97B7B",
+        },
+      },
+      fontFamily: {
+        inter: ["Inter"],
+        "inter-medium": ["Inter-Medium"],
+        "inter-semibold": ["Inter-SemiBold"],
+        "inter-bold": ["Inter-Bold"],
+      },
+      fontSize: {
+        h1: ["28px", { lineHeight: "33.6px" }],
+        h2: ["22px", { lineHeight: "28.6px" }],
+        h3: ["18px", { lineHeight: "25.2px" }],
+        body: ["16px", { lineHeight: "25.6px", letterSpacing: "-0.01em" }],
+        chat: ["16px", { lineHeight: "24px" }],
+        label: ["13px", { lineHeight: "18.2px", letterSpacing: "0.02em" }],
+        stat: ["32px", { lineHeight: "38.4px" }],
+        "stat-lg": ["48px", { lineHeight: "57.6px" }],
+      },
+      borderRadius: {
+        sm: "8px",
+        md: "12px",
+        lg: "16px",
+        xl: "24px",
+      },
+      spacing: {
+        xs: "4px",
+        sm: "8px",
+        md: "16px",
+        lg: "24px",
+        xl: "32px",
+      },
+    },
+  },
+  plugins: [],
+};
