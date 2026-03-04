@@ -1,11 +1,12 @@
 export const colors = {
   dark: {
-    bg: { primary: "#0C1120", surface: "#1A1F35", elevated: "#242A42" },
+    bg: { primary: "#0C1120", surface: "#1A1F35", elevated: "#242A42", input: "#1A1F35", border: "#242A4240" },
     brand: { purple: "#7C3AED", purpleLight: "#A78BFA", teal: "#2DD4BF", gold: "#F5C542" },
     text: { primary: "#EAEDF3", secondary: "#8B92A8", tertiary: "#5A6178" },
     bubble: { ai: "#1E2440", user: "#7C3AED" },
     status: { success: "#22C55E", warning: "#F59E0B", crisis: "#E07373" },
     gradient: { start: "#7C3AED", end: "#2DD4BF" },
+    tab: { bg: "#0C1120", border: "#1A1F35", inactive: "#5A6178" },
   },
   light: {
     bg: { primary: "#F8F6F3", surface: "#FFFFFF", elevated: "#F0EDE8" },

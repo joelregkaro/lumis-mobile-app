@@ -17,6 +17,7 @@ interface MemoryState {
   fetchLatestInsight: () => Promise<void>;
   fetchWrapped: () => Promise<void>;
   fetchWeeklyInsightCards: () => Promise<void>;
+  markShared: (cardId: string) => Promise<void>;
   updateMemory: (id: string, content: string) => Promise<void>;
   deleteMemory: (id: string) => Promise<void>;
   getMemoriesByCategory: (category: MemoryCategory) => UserMemory[];
@@ -128,6 +129,14 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       .limit(5);
 
     set({ weeklyInsightCards: (data as InsightCard[]) ?? [] });
+  },
+
+  markShared: async (cardId) => {
+    const now = new Date().toISOString();
+    await supabase.from("insight_cards").update({ shared_at: now }).eq("id", cardId);
+    set((state) => ({
+      wrappedCards: state.wrappedCards.map((c) => (c.id === cardId ? { ...c, shared_at: now } : c)),
+    }));
   },
 
   updateMemory: async (id, content) => {

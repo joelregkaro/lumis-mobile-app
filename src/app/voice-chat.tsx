@@ -121,10 +121,6 @@ export default function VoiceChatScreen() {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
-      const { isConnected, endSession: storeEnd } = useVoiceChatStore.getState();
-      if (isConnected) {
-        storeEnd().catch(() => {});
-      }
     };
   }, []);
 
@@ -189,24 +185,25 @@ export default function VoiceChatScreen() {
       timerRef.current = null;
     }
 
+    // Disconnect audio/WebSocket immediately (should be fast)
     try {
-      // Timeout the entire cleanup to prevent infinite hang
       await Promise.race([
-        (async () => {
-          await disconnect();
-          await endSession();
-          useStreakStore.getState().updateStreak();
-        })(),
-        new Promise((resolve) => setTimeout(resolve, 5000)),
+        disconnect(),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
       ]);
     } catch {}
 
-    setIsEnding(false);
+    // Navigate away FIRST so the user isn't stuck staring at the screen
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace("/");
     }
+
+    // Fire-and-forget: save session + update streak in background
+    endSession().catch(() => {});
+    useStreakStore.getState().updateStreak();
+    setIsEnding(false);
   }, [isEnding, disconnect, endSession, router]);
 
   const confirmEndSession = useCallback(() => {

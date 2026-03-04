@@ -12,6 +12,7 @@ interface AuthState {
   isOnboarded: boolean;
 
   initialize: () => Promise<void>;
+  _subscribeAuthChanges: () => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -30,7 +31,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        // Expired or invalid refresh token — clear stale state and send to sign-in
+        console.warn("getSession error (likely expired refresh token):", error.message);
+        await supabase.auth.signOut().catch(() => {});
+        set({ session: null, user: null, profile: null, isOnboarded: false, isLoading: false });
+        get()._subscribeAuthChanges();
+        return;
+      }
+
       const session = data.session;
       set({ session, user: session?.user ?? null });
 
@@ -39,23 +50,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       set({ isLoading: false });
-
-      supabase.auth.onAuthStateChange((_event, session) => {
-        set({ session, user: session?.user ?? null });
-        if (session?.user) {
-          get().fetchProfile();
-        } else {
-          set({ profile: null, isOnboarded: false });
-        }
-      });
-    } catch {
+      get()._subscribeAuthChanges();
+    } catch (err) {
+      console.warn("initialize error:", err);
       set({ isLoading: false });
     }
   },
 
+  _subscribeAuthChanges: () => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "TOKEN_REFRESHED" && session) {
+        // Token refreshed — update session/user but DON'T touch isOnboarded
+        set({ session, user: session.user });
+        return;
+      }
+
+      if (event === "SIGNED_OUT" || !session) {
+        set({ session: null, user: null, profile: null, isOnboarded: false });
+        return;
+      }
+
+      // SIGNED_IN or INITIAL_SESSION — fully load the profile before updating state
+      const prevUser = get().user;
+      set({ session, user: session.user });
+
+      if (session.user && session.user.id !== prevUser?.id) {
+        await get().fetchProfile();
+      }
+    });
+  },
+
   signInWithEmail: async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    if (data.user) {
+      set({ session: data.session, user: data.user });
+      await get().fetchProfile();
+    }
   },
 
   signUpWithEmail: async (email, password) => {
@@ -134,40 +165,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) return;
 
-    let { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (error && !data) {
-      console.warn("fetchProfile: query failed, skipping to avoid data overwrite:", error.message);
-      return;
-    }
-
-    if (!data) {
-      const { data: created } = await supabase
+    try {
+      let { data, error } = await supabase
         .from("users")
-        .upsert(
-          {
-            id: user.id,
-            email: user.email ?? "",
-            display_name: null,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            preferences: {},
-          },
-          { onConflict: "id" },
-        )
-        .select()
+        .select("*")
+        .eq("id", user.id)
         .single();
-      data = created;
-    }
 
-    if (data) {
-      set({
-        profile: data as AppUser,
-        isOnboarded: !!data.onboarding_completed_at,
-      });
+      if (error && error.code === "PGRST116") {
+        // Row not found — create one
+        const { data: created } = await supabase
+          .from("users")
+          .upsert(
+            {
+              id: user.id,
+              email: user.email ?? "",
+              display_name: null,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              preferences: {},
+            },
+            { onConflict: "id" },
+          )
+          .select()
+          .single();
+        data = created;
+      } else if (error) {
+        console.warn("fetchProfile: query failed:", error.message);
+        // Don't overwrite existing isOnboarded if we had a profile before
+        if (get().profile) return;
+        return;
+      }
+
+      if (data) {
+        set({
+          profile: data as AppUser,
+          isOnboarded: !!data.onboarding_completed_at,
+        });
+      }
+    } catch (err) {
+      console.warn("fetchProfile exception:", err);
     }
   },
 

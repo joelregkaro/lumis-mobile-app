@@ -42,6 +42,13 @@
         {
           "microphonePermission": "Lumis needs access to your microphone for voice sessions."
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "lumis",
+          "project": "lumis-app"
+        }
       ]
     ],
     "experiments": {

@@ -1,13 +1,18 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { View, Text, Pressable, ScrollView, RefreshControl, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, Pressable, ScrollView, RefreshControl, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import CompanionAvatar, { getEvolutionTier } from "@/components/companion/CompanionAvatar";
-import MoodCheckIn from "@/components/mood/MoodCheckIn";
+import { getEvolutionTier } from "@/components/companion/CompanionAvatar";
 import EchoCard from "@/components/echo/EchoCard";
+import AddHabitModal from "@/components/habits/AddHabitModal";
+import CompanionHeroCard from "@/components/home/CompanionHeroCard";
+import DailyRhythmSection from "@/components/home/DailyRhythmSection";
+import ProgressSnapshot from "@/components/home/ProgressSnapshot";
+import QuickActionsRow from "@/components/home/QuickActionsRow";
+import { LoadingScreen, SectionHeader } from "@/components/ui";
 import { useAuthStore } from "@/store/auth";
 import { useMoodStore } from "@/store/mood";
 import { useEchoStore } from "@/store/echo";
@@ -17,8 +22,33 @@ import { useSubscriptionStore } from "@/store/subscription";
 import { useStreakStore } from "@/store/streak";
 import { useDailyCheckinStore } from "@/store/dailyCheckin";
 import { useHabitStore } from "@/store/habits";
-import VoiceNoteButton from "@/components/voice/VoiceNoteButton";
+import { useHumanScoreStore, getTier } from "@/store/humanScore";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { useMilestoneStore } from "@/store/milestones";
+import { colors } from "@/constants/theme";
+import type { Habit } from "@/types/database";
+
+const c = colors.dark;
+
+const MILESTONE_MESSAGES: Record<number, string> = {
+  7: "One week in. You're building something real.",
+  14: "Two weeks. The neural pathways are strengthening.",
+  21: "Three weeks. This is becoming part of who you are.",
+  30: "A full month. Incredible commitment.",
+  66: "Science says this is becoming automatic.",
+  90: "90 days. This is a lifestyle now.",
+  100: "Triple digits. This is who you are.",
+  365: "ONE YEAR. Legendary.",
+};
+
+const SURPRISE_MESSAGES = [
+  "Every time you show up, it counts.",
+  "Small actions. Big change. That's you.",
+  "Consistency is a superpower, and you have it.",
+  "Future you will thank present you for this.",
+];
+
+const LAPSE_TAGS = ["Forgot", "Tired", "Busy", "Sick", "Traveling", "Didn't feel like it", "Other"];
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -35,9 +65,9 @@ function getMoodTrendText(moods: { mood_score: number }[]): { text: string; colo
   const recentAvg = recent.reduce((s, m) => s + m.mood_score, 0) / recent.length;
   const olderAvg = older.reduce((s, m) => s + m.mood_score, 0) / older.length;
   const diff = recentAvg - olderAvg;
-  if (diff > 0.5) return { text: `Mood trending up (${recentAvg.toFixed(1)}/10)`, color: "#2DD4BF", icon: "trending-up" };
-  if (diff < -0.5) return { text: `Mood dipped recently (${recentAvg.toFixed(1)}/10)`, color: "#F87171", icon: "trending-down" };
-  return { text: `Mood steady (${recentAvg.toFixed(1)}/10)`, color: "#8B92A8", icon: "remove-outline" };
+  if (diff > 0.5) return { text: `Trending up (${recentAvg.toFixed(1)})`, color: c.brand.teal, icon: "trending-up" };
+  if (diff < -0.5) return { text: `Dipped (${recentAvg.toFixed(1)})`, color: c.status.crisis, icon: "trending-down" };
+  return { text: `Steady (${recentAvg.toFixed(1)})`, color: c.text.secondary, icon: "remove-outline" };
 }
 
 function getCompanionMessage(opts: {
@@ -56,16 +86,16 @@ function getCompanionMessage(opts: {
   if (pendingEchoes.length > 0) {
     const item = pendingEchoes[0].action_item;
     const short = item.length > 50 ? item.slice(0, 47) + "..." : item;
-    return `How did it go with "${short}"? I'd love to hear.`;
+    return `How did it go with "${short}"?`;
   }
   if (latestInsight) {
     return "I noticed something about your week.\nWant to hear?";
   }
   if (goals.length > 0) {
-    return `You're working on ${goals.length} goal${goals.length > 1 ? "s" : ""}. Want to check in on progress?`;
+    return `You're working on ${goals.length} goal${goals.length > 1 ? "s" : ""}. Want to check in?`;
   }
   if (moodTrend?.icon === "trending-up") {
-    return `Things seem to be looking up, ${name}. Let's keep the momentum going.`;
+    return `Things are looking up, ${name}. Let's keep the momentum.`;
   }
   return "I'm here whenever you're\nready to talk.";
 }
@@ -80,35 +110,33 @@ export default function HomeScreen() {
   const { goals, fetchGoals } = useGoalStore();
   const recentMoods = useMoodStore((s) => s.recentMoods);
   const fetchRecentMoods = useMoodStore((s) => s.fetchRecentMoods);
-  const { todaysCheckin, fetchToday: fetchDailyCheckin, setMorningIntention, fetchWeekHistory, weekHistory } = useDailyCheckinStore();
-  const { habits, todayCompletions, fetchHabits, fetchTodayCompletions, completeToday, uncompleteToday, isCompletedToday, todaysHabits, createHabit } = useHabitStore();
+  const { todaysCheckin, fetchToday: fetchDailyCheckin, setMorningIntention, fetchWeekHistory } = useDailyCheckinStore();
+  const { todayCompletions, fetchHabits, fetchTodayCompletions, completeToday, uncompleteToday, isCompletedToday, todaysHabits, pauseHabit, archiveHabit, addReflection } = useHabitStore();
+  const { latestScore, level, archetype, fetchLatestScore } = useHumanScoreStore();
   const [moodLogged, setMoodLogged] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
-  const [newHabitTitle, setNewHabitTitle] = useState("");
-  const [newHabitFreq, setNewHabitFreq] = useState<"daily" | "weekdays" | "weekends" | "weekly">("daily");
-  const [newHabitTime, setNewHabitTime] = useState<"morning" | "afternoon" | "evening" | null>(null);
-  const [savingHabit, setSavingHabit] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [intentionText, setIntentionText] = useState("");
-  const [intentionDomain, setIntentionDomain] = useState<string | null>(null);
-  const [intentionEnergy, setIntentionEnergy] = useState(5);
-  const [showIntentionInput, setShowIntentionInput] = useState(false);
-  const [savingIntention, setSavingIntention] = useState(false);
+  const [celebrationText, setCelebrationText] = useState<string | null>(null);
+  const [showLapsePrompt, setShowLapsePrompt] = useState<{ habitId: string; title: string; prevStreak: number } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      await Promise.all([fetchTodaysMood(), fetchPendingEchoes(), fetchLatestInsight(), fetchGoals(), fetchRecentMoods(14), fetchStreak(), fetchWeeklyInsightCards(), fetchDailyCheckin(), fetchWeekHistory(), fetchHabits(), fetchTodayCompletions()]);
+      await Promise.all([
+        fetchTodaysMood(), fetchPendingEchoes(), fetchLatestInsight(),
+        fetchGoals(), fetchRecentMoods(14), fetchStreak(),
+        fetchWeeklyInsightCards(), fetchDailyCheckin(), fetchWeekHistory(),
+        fetchHabits(), fetchTodayCompletions(), fetchLatestScore(),
+      ]);
+    } catch (e) {
+      console.warn("Failed to load some home data:", e);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    if (todaysMood) setMoodLogged(true);
-  }, [todaysMood]);
+  useEffect(() => { if (todaysMood) setMoodLogged(true); }, [todaysMood]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -136,475 +164,182 @@ export default function HomeScreen() {
   }, [moodTrend, latestInsight]);
   const companionTier = useMemo(() => getEvolutionTier(currentStreak), [currentStreak]);
 
-  const handleAddHabit = async () => {
-    if (!newHabitTitle.trim()) return;
-    setSavingHabit(true);
-    try {
-      await createHabit({
-        title: newHabitTitle.trim(),
-        frequency: newHabitFreq,
-        preferred_time: newHabitTime ?? undefined,
-      });
-      await hapticSuccess();
-      setShowAddHabit(false);
-      setNewHabitTitle("");
-      setNewHabitFreq("daily");
-      setNewHabitTime(null);
-      fetchTodayCompletions();
-    } catch {}
-    setSavingHabit(false);
+  const showCelebration = (text: string) => {
+    setCelebrationText(text);
+    setTimeout(() => setCelebrationText(null), 2000);
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-bg-primary" edges={["top"]}>
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#7C3AED" />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleHabitComplete = async (habit: Habit) => {
+    const result = await completeToday(habit.id);
+    fetchStreak();
+    await hapticSuccess();
+    await fetchHabits();
+
+    if (habit.celebration) showCelebration(habit.celebration);
+
+    const updated = useHabitStore.getState().habits.find((h) => h.id === habit.id);
+    if (updated) {
+      const streak = updated.current_streak;
+      if (MILESTONE_MESSAGES[streak]) {
+        setTimeout(() => Alert.alert(`${streak}-Day Streak!`, MILESTONE_MESSAGES[streak], [{ text: "Let's go!" }]), 500);
+      }
+      if (!MILESTONE_MESSAGES[streak] && Math.random() < 0.1) {
+        showCelebration(SURPRISE_MESSAGES[Math.floor(Math.random() * SURPRISE_MESSAGES.length)]);
+      }
+      const milestones: Record<string, boolean> = {};
+      if (streak >= 7) milestones.habit_streak_7 = true;
+      if (streak >= 14) milestones.habit_streak_14 = true;
+      if (streak >= 21) milestones.habit_streak_21 = true;
+      if (streak >= 30) milestones.habit_streak_30 = true;
+      if (Object.keys(milestones).length > 0) {
+        useMilestoneStore.getState().checkNewMilestones(milestones);
+      }
+    }
+    if (result?.lapsed) {
+      setShowLapsePrompt({ habitId: habit.id, title: habit.title, prevStreak: result.streak });
+    }
+  };
+
+  const handleLapseTag = async (tag: string) => {
+    if (!showLapsePrompt) return;
+    await addReflection({ habitId: showLapsePrompt.habitId, reflectionType: "lapse", whatBlocked: tag });
+    setShowLapsePrompt(null);
+  };
+
+  const handleHabitLongPress = (habit: Habit) => {
+    hapticLight();
+    Alert.alert(habit.title, "What would you like to do?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Pause Habit", onPress: async () => { await pauseHabit(habit.id); await fetchHabits(); } },
+      {
+        text: "Remove Habit", style: "destructive",
+        onPress: () => Alert.alert("Remove this habit?", "This can't be undone.", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Remove", style: "destructive", onPress: async () => { await archiveHabit(habit.id); await fetchHabits(); } },
+        ]),
+      },
+    ]);
+  };
+
+  if (loading) return <LoadingScreen />;
 
   return (
-    <SafeAreaView className="flex-1 bg-bg-primary" edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={["top"]}>
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#7C3AED" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.brand.purple} />}
       >
         {/* Header */}
-        <Animated.View entering={FadeIn.duration(400)} className="mb-lg flex-row items-center justify-between pt-md">
-          <View>
-            <Text style={{ fontSize: 28, fontWeight: "700", color: "#EAEDF3", letterSpacing: -0.5 }}>
-              {greeting}
-            </Text>
-          </View>
+        <Animated.View entering={FadeIn.duration(400)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 16, marginBottom: 20 }}>
+          <Text style={{ fontSize: 28, fontWeight: "700", color: c.text.primary, letterSpacing: -0.5 }}>
+            {greeting}
+          </Text>
           <Pressable
             onPress={() => router.push("/(tabs)/me")}
-            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#1E1E27", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.bg.surface, alignItems: "center", justifyContent: "center" }}
             accessibilityLabel="Settings"
           >
-            <Ionicons name="settings-outline" size={20} color="#8B92A8" />
+            <Ionicons name="settings-outline" size={20} color={c.text.secondary} />
           </Pressable>
         </Animated.View>
 
-        {/* Streak Counter */}
-        {currentStreak > 0 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 16 }}>
-            <View style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#1A1F35",
-              borderRadius: 16,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: currentStreak >= 7 ? "#FBBF2440" : "#242A4240",
-            }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: currentStreak >= 7 ? "#FBBF2420" : "#F8717120",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: 12,
-              }}>
-                <Ionicons name="flame" size={22} color={currentStreak >= 7 ? "#FBBF24" : "#F87171"} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 20, fontWeight: "800", color: "#EAEDF3" }}>
-                  {currentStreak} <Text style={{ fontSize: 14, fontWeight: "500", color: "#8B92A8" }}>day streak</Text>
-                </Text>
-                <Text style={{ fontSize: 12, color: "#5A6178", marginTop: 2 }}>
-                  {currentStreak >= 30 ? "Incredible consistency!" : currentStreak >= 7 ? "Building a real habit" : "Keep it going!"}
-                </Text>
-              </View>
+        {/* HERO: Companion Card */}
+        <CompanionHeroCard
+          companionName={companionName}
+          companionMessage={companionMessage}
+          companionExpression={companionExpression}
+          companionTier={companionTier}
+          isPro={isPro}
+          onChat={async () => { await hapticLight(); router.push("/(tabs)/chat"); }}
+          onVoice={async () => { await hapticLight(); router.push(isPro ? "/voice-chat" : "/paywall"); }}
+        />
+
+        {/* Celebration overlay */}
+        {celebrationText && (
+          <Animated.View entering={FadeIn.duration(200)} style={{ alignItems: "center", marginBottom: 16 }}>
+            <View style={{ backgroundColor: `${c.brand.gold}20`, borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14, borderWidth: 1, borderColor: `${c.brand.gold}40` }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: c.brand.gold, textAlign: "center" }}>{celebrationText}</Text>
             </View>
           </Animated.View>
         )}
 
-        {/* This Week Progress Strip */}
-        {weekHistory.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 16 }}>
-            <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                <Ionicons name="calendar-outline" size={14} color="#8B92A8" style={{ marginRight: 6 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase" }}>
-                  This Week
-                </Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                {(() => {
-                  const today = new Date();
-                  const dayOfWeek = today.getDay();
-                  const monday = new Date(today);
-                  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-                  const dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
-                  return Array.from({ length: 7 }, (_, i) => {
-                    const d = new Date(monday);
-                    d.setDate(monday.getDate() + i);
-                    const dateStr = d.toISOString().split("T")[0];
-                    const checkin = weekHistory.find((c) => c.checkin_date === dateStr);
-                    const isToday = dateStr === today.toISOString().split("T")[0];
-                    const hasMorning = !!checkin?.morning_intention;
-                    const hasEvening = !!checkin?.day_rating;
-                    const rating = checkin?.day_rating;
-                    const ratingColor = !rating ? "#242A42" : rating >= 8 ? "#2DD4BF" : rating >= 5 ? "#A78BFA" : "#F87171";
-                    return (
-                      <View key={i} style={{ alignItems: "center", flex: 1 }}>
-                        <Text style={{ fontSize: 11, color: isToday ? "#EAEDF3" : "#5A6178", fontWeight: isToday ? "700" : "400", marginBottom: 6 }}>
-                          {dayLabels[i]}
-                        </Text>
-                        <View style={{
-                          width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
-                          backgroundColor: hasEvening ? ratingColor + "30" : hasMorning ? "#FBBF2420" : "#1E1E27",
-                          borderWidth: isToday ? 2 : hasMorning || hasEvening ? 1 : 0,
-                          borderColor: isToday ? "#7C3AED" : ratingColor + "50",
-                        }}>
-                          {hasEvening ? (
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ratingColor }} />
-                          ) : hasMorning ? (
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#FBBF24", opacity: 0.6 }} />
-                          ) : null}
-                        </View>
-                      </View>
-                    );
-                  });
-                })()}
-              </View>
-              <Text style={{ fontSize: 12, color: "#5A6178", marginTop: 10, textAlign: "center" }}>
-                {weekHistory.filter((c) => c.morning_intention).length} of 7 days this week
+        {/* Lapse compassionate prompt */}
+        {showLapsePrompt && (
+          <Animated.View entering={FadeInDown.duration(300)} style={{ marginBottom: 16 }}>
+            <View style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.status.crisis }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary, marginBottom: 4 }}>
+                You missed "{showLapsePrompt.title}" yesterday
               </Text>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Morning Intention */}
-        {!todaysCheckin?.morning_intention && new Date().getHours() < 14 ? (
-          <Animated.View entering={FadeInDown.duration(400)} className="mb-lg">
-            {!showIntentionInput ? (
-              <Pressable
-                onPress={() => { setShowIntentionInput(true); hapticLight(); }}
-                style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#7C3AED30" }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#FBBF2420", alignItems: "center", justifyContent: "center", marginRight: 10 }}>
-                    <Ionicons name="sunny-outline" size={18} color="#FBBF24" />
-                  </View>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#EAEDF3" }}>Set your intention</Text>
-                </View>
-                <Text style={{ fontSize: 14, color: "#8B92A8", lineHeight: 20 }}>
-                  What's one thing you want to make happen today?
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#7C3AED40" }}>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: "#EAEDF3", marginBottom: 12 }}>
-                  Today I want to...
-                </Text>
-                <TextInput
-                  value={intentionText}
-                  onChangeText={setIntentionText}
-                  placeholder="e.g., Go for a 10-minute walk after lunch"
-                  placeholderTextColor="#5A6178"
-                  style={{ backgroundColor: "#1E1E27", borderRadius: 12, padding: 14, fontSize: 15, color: "#EAEDF3", borderWidth: 1, borderColor: "#242A4240" }}
-                  autoFocus
-                />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                  {([
-                    { key: "health", label: "Health", icon: "heart-outline" as const },
-                    { key: "career", label: "Work", icon: "briefcase-outline" as const },
-                    { key: "relationships", label: "Relationships", icon: "people-outline" as const },
-                    { key: "personal_growth", label: "Growth", icon: "trending-up" as const },
-                    { key: "rest_recovery", label: "Rest", icon: "bed-outline" as const },
-                    { key: "fun_creativity", label: "Fun", icon: "color-palette-outline" as const },
-                  ]).map((d) => (
-                    <Pressable
-                      key={d.key}
-                      onPress={() => { setIntentionDomain(intentionDomain === d.key ? null : d.key); hapticLight(); }}
-                      style={{
-                        flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-                        backgroundColor: intentionDomain === d.key ? "#7C3AED20" : "#1E1E27",
-                        borderWidth: 1, borderColor: intentionDomain === d.key ? "#7C3AED60" : "#242A4240",
-                      }}
-                    >
-                      <Ionicons name={d.icon} size={14} color={intentionDomain === d.key ? "#A78BFA" : "#5A6178"} style={{ marginRight: 4 }} />
-                      <Text style={{ fontSize: 13, color: intentionDomain === d.key ? "#A78BFA" : "#8B92A8", fontWeight: "500" }}>{d.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Pressable
-                  onPress={async () => {
-                    if (!intentionText.trim()) return;
-                    setSavingIntention(true);
-                    await setMorningIntention(intentionText.trim(), intentionDomain, intentionEnergy);
-                    await updateStreak();
-                    await hapticSuccess();
-                    setSavingIntention(false);
-                    setShowIntentionInput(false);
-                  }}
-                  disabled={!intentionText.trim() || savingIntention}
-                  style={{
-                    marginTop: 14, backgroundColor: intentionText.trim() ? "#7C3AED" : "#7C3AED40",
-                    borderRadius: 12, paddingVertical: 12, alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: "white" }}>
-                    {savingIntention ? "Setting..." : "Set Intention"}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </Animated.View>
-        ) : todaysCheckin?.morning_intention ? (
-          <Animated.View entering={FadeInDown.duration(400)} className="mb-lg">
-            <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: "#FBBF24" }}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="sunny" size={16} color="#FBBF24" style={{ marginRight: 8 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Today's Intention
-                </Text>
-              </View>
-              <Text style={{ fontSize: 15, color: "#EAEDF3", fontWeight: "500", marginTop: 8 }}>
-                "{todaysCheckin.morning_intention}"
+              <Text style={{ fontSize: 13, color: c.text.secondary, marginBottom: 12, lineHeight: 18 }}>
+                That's just data, not failure. What got in the way?
               </Text>
-              {todaysCheckin.focus_domain && (
-                <Text style={{ fontSize: 12, color: "#A78BFA", marginTop: 6, fontWeight: "500" }}>
-                  Focus: {todaysCheckin.focus_domain.replace(/_/g, " ")}
-                </Text>
-              )}
-            </View>
-          </Animated.View>
-        ) : null}
-
-        {/* Today's Habits */}
-        <Animated.View entering={FadeInDown.duration(400)} className="mb-lg">
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-            <Ionicons name="refresh-outline" size={16} color="#2DD4BF" style={{ marginRight: 6 }} />
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase" }}>
-              Today's Habits
-            </Text>
-            {todaysHabits().length > 0 && (
-              <Text style={{ fontSize: 12, color: "#5A6178", marginLeft: 8 }}>
-                {todayCompletions.length}/{todaysHabits().length}
-              </Text>
-            )}
-            <Pressable
-              onPress={() => setShowAddHabit(true)}
-              style={{ marginLeft: "auto", width: 28, height: 28, borderRadius: 14, backgroundColor: "#2DD4BF15", alignItems: "center", justifyContent: "center" }}
-            >
-              <Ionicons name="add" size={18} color="#2DD4BF" />
-            </Pressable>
-          </View>
-          <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, overflow: "hidden" }}>
-            {todaysHabits().length === 0 ? (
-              <Pressable
-                onPress={() => setShowAddHabit(true)}
-                style={{ padding: 20, alignItems: "center" }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#2DD4BF10", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                  <Ionicons name="add-circle-outline" size={24} color="#2DD4BF" />
-                </View>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: "#EAEDF3", marginBottom: 4 }}>
-                  Start a daily habit
-                </Text>
-                <Text style={{ fontSize: 13, color: "#5A6178", textAlign: "center", lineHeight: 18 }}>
-                  Small consistent actions build big change.{"\n"}Tap to add your first habit.
-                </Text>
-              </Pressable>
-            ) : (
-              todaysHabits().map((habit, i) => {
-                const completed = isCompletedToday(habit.id);
-                return (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {LAPSE_TAGS.map((tag) => (
                   <Pressable
-                    key={habit.id}
-                    onPress={async () => {
-                      if (completed) {
-                        await uncompleteToday(habit.id);
-                        await hapticLight();
-                      } else {
-                        await completeToday(habit.id);
-                        fetchStreak();
-                        await hapticSuccess();
-                      }
-                    }}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      padding: 14,
-                      borderBottomWidth: i < todaysHabits().length - 1 ? 0.5 : 0,
-                      borderBottomColor: "#242A4240",
-                    }}
+                    key={tag}
+                    onPress={() => handleLapseTag(tag)}
+                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: `${c.status.crisis}15`, borderWidth: 1, borderColor: `${c.status.crisis}30` }}
                   >
-                    <View style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 13,
-                      borderWidth: 2,
-                      borderColor: completed ? "#2DD4BF" : "#3F3F4640",
-                      backgroundColor: completed ? "#2DD4BF20" : "transparent",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginRight: 12,
-                    }}>
-                      {completed && <Ionicons name="checkmark" size={14} color="#2DD4BF" />}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{
-                        fontSize: 15,
-                        fontWeight: "500",
-                        color: completed ? "#5A6178" : "#EAEDF3",
-                        textDecorationLine: completed ? "line-through" : "none",
-                      }}>
-                        {habit.title}
-                      </Text>
-                      {habit.current_streak > 0 && (
-                        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 3 }}>
-                          <Ionicons name="flame" size={12} color={habit.current_streak >= 7 ? "#FBBF24" : "#F8717180"} />
-                          <Text style={{ fontSize: 11, color: "#5A6178", marginLeft: 3 }}>
-                            {habit.current_streak}-day streak
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    {habit.preferred_time && (
-                      <Text style={{ fontSize: 11, color: "#5A6178" }}>
-                        {habit.preferred_time === "morning" ? "☀️" : habit.preferred_time === "afternoon" ? "🌤" : "🌙"}
-                      </Text>
-                    )}
+                    <Text style={{ fontSize: 13, color: c.status.crisis, fontWeight: "500" }}>{tag}</Text>
                   </Pressable>
-                );
-              })
-            )}
-          </View>
-        </Animated.View>
-
-        {/* Mood Check-in */}
-        {!moodLogged ? (
-          <Animated.View entering={FadeInDown.duration(400)} className="mb-lg">
-            <MoodCheckIn onComplete={() => { setMoodLogged(true); updateStreak(); }} />
-          </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInDown.duration(400)} className="mb-lg">
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1A1F35", borderRadius: 16, padding: 16 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#14B8A620", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-                <Ionicons name="checkmark" size={18} color="#2DD4BF" />
+                ))}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, color: "#EAEDF3", fontWeight: "500" }}>Checked in today</Text>
-                {moodTrend ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-                    <Ionicons name={moodTrend.icon} size={14} color={moodTrend.color} style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 13, color: moodTrend.color }}>{moodTrend.text}</Text>
-                  </View>
-                ) : (
-                  <Text style={{ fontSize: 13, color: "#5A6178", marginTop: 2 }}>You're doing great by showing up.</Text>
-                )}
-              </View>
+              <Pressable onPress={() => setShowLapsePrompt(null)} style={{ alignSelf: "flex-end", marginTop: 8 }}>
+                <Text style={{ fontSize: 12, color: c.text.tertiary }}>Dismiss</Text>
+              </Pressable>
             </View>
           </Animated.View>
         )}
 
-        {/* Session Echoes */}
+        {/* Daily Rhythm (collapsible) */}
+        <DailyRhythmSection
+          moodLogged={moodLogged}
+          onMoodComplete={() => { setMoodLogged(true); updateStreak(); }}
+          moodTrend={moodTrend}
+          todaysCheckin={todaysCheckin}
+          onSetIntention={async (text, domain, energy) => {
+            await setMorningIntention(text, domain, energy);
+            await updateStreak();
+          }}
+          habits={todaysHabits()}
+          todayCompletions={todayCompletions}
+          isCompletedToday={isCompletedToday}
+          onHabitComplete={handleHabitComplete}
+          onHabitUncomplete={async (id) => { await uncompleteToday(id); await hapticLight(); }}
+          onHabitLongPress={handleHabitLongPress}
+          onAddHabit={() => setShowAddHabit(true)}
+          onViewAllHabits={() => router.push("/habits")}
+        />
+
+        {/* Between Sessions (echoes) */}
         {pendingEchoes.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(100).duration(400)} className="mb-lg">
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-              <Ionicons name="repeat-outline" size={16} color="#8B92A8" style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase" }}>
-                Between Sessions
-              </Text>
-            </View>
+          <Animated.View entering={FadeInDown.delay(150).duration(400)} style={{ marginBottom: 24 }}>
+            <SectionHeader icon="repeat-outline" label="Between Sessions" />
             {pendingEchoes.map((echo, i) => (
               <EchoCard key={echo.id} echo={echo} index={i} onComplete={markCompleted} onSkip={markSkipped} />
             ))}
           </Animated.View>
         )}
 
-        {/* Companion Card */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mb-lg">
-          <Pressable
-            onPress={async () => {
-              await hapticLight();
-              router.push("/(tabs)/chat");
-            }}
-            style={{
-              backgroundColor: "#1A1F35",
-              borderRadius: 20,
-              padding: 24,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#242A4240",
-            }}
-            accessibilityLabel={`Start a conversation with ${companionName}`}
-            accessibilityRole="button"
-          >
-            <CompanionAvatar
-              expression={companionExpression}
-              size="large"
-              tier={companionTier}
-              showTier
-            />
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 16 }}>
-              {companionName}
-            </Text>
-            <Text style={{ fontSize: 16, color: "#EAEDF3", textAlign: "center", marginTop: 8, lineHeight: 24 }}>
-              {companionMessage}
-            </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 20,
-                backgroundColor: "#7C3AED",
-                paddingHorizontal: 24,
-                paddingVertical: 12,
-                borderRadius: 24,
-              }}
-            >
-              <Ionicons name="chatbubble-outline" size={16} color="white" style={{ marginRight: 8 }} />
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "white" }}>Start a Conversation</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={async () => {
-              await hapticLight();
-              if (isPro) {
-                router.push("/voice-chat");
-              } else {
-                router.push("/paywall");
-              }
-            }}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              marginTop: 10,
-              paddingHorizontal: 24,
-              paddingVertical: 10,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: "#7C3AED40",
-            }}
-            accessibilityLabel={`Start a voice session with ${companionName}`}
-            accessibilityRole="button"
-          >
-            <Ionicons name="mic-outline" size={16} color="#A78BFA" style={{ marginRight: 8 }} />
-            <Text style={{ fontSize: 14, fontWeight: "500", color: "#A78BFA" }}>Voice Session</Text>
-            {!isPro && (
-              <View style={{ marginLeft: 8, backgroundColor: "#7C3AED20", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ fontSize: 10, fontWeight: "600", color: "#A78BFA" }}>PRO</Text>
-              </View>
-            )}
-          </Pressable>
-        </Animated.View>
+        {/* Progress Snapshot */}
+        <ProgressSnapshot
+          streak={currentStreak}
+          humanScore={latestScore?.composite_score ?? null}
+          archetype={archetype}
+          level={level}
+          moodTrend={moodTrend}
+          onHumanScore={() => router.push("/human-score")}
+          onGrowth={() => router.push("/(tabs)/growth")}
+        />
 
         {/* Weekly Insight Card Banner */}
         {weeklyInsightCards.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(250).duration(400)} className="mb-lg">
+          <Animated.View entering={FadeInDown.delay(250).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable onPress={() => router.push("/(tabs)/growth")}>
               <LinearGradient
-                colors={["#6D28D9", "#14B8A6"]}
+                colors={[c.gradient.start, c.gradient.end]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{ borderRadius: 16, padding: 16 }}
@@ -629,53 +364,47 @@ export default function HomeScreen() {
         )}
 
         {/* Weekly Insight */}
-        <Animated.View entering={FadeInDown.delay(300).duration(400)} className="mb-lg">
-          <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: "#14B8A6" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              <Ionicons name="bulb-outline" size={16} color="#FBBF24" style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase" }}>
-                Weekly Insight
-              </Text>
-            </View>
-            {latestInsight ? (
-              <>
-                <Text style={{ fontSize: 15, color: "#EAEDF3", lineHeight: 22 }}>
-                  {latestInsight.description}
+        {latestInsight && (
+          <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ marginBottom: 24 }}>
+            <View style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.brand.teal }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                <Ionicons name="bulb-outline" size={16} color={c.brand.gold} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: c.text.secondary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  Weekly Insight
                 </Text>
-                <Pressable onPress={() => router.push("/(tabs)/growth")} style={{ alignSelf: "flex-end", marginTop: 8 }}>
-                  <Text style={{ fontSize: 14, color: "#A78BFA", fontWeight: "500" }}>See all insights →</Text>
-                </Pressable>
-              </>
-            ) : (
-              <Text style={{ fontSize: 14, color: "#5A6178", lineHeight: 20 }}>
-                Start having conversations to unlock your first insight.
+              </View>
+              <Text style={{ fontSize: 15, color: c.text.primary, lineHeight: 22 }}>
+                {latestInsight.description}
               </Text>
-            )}
-          </View>
-        </Animated.View>
+              <Pressable onPress={() => router.push("/(tabs)/growth")} style={{ alignSelf: "flex-end", marginTop: 8 }}>
+                <Text style={{ fontSize: 14, color: c.brand.purpleLight, fontWeight: "500" }}>See all insights →</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Active Goal Spotlight */}
         {activeGoals.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(350).duration(400)} className="mb-lg">
+          <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable
               onPress={() => router.push("/(tabs)/growth")}
-              style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: "#7C3AED" }}
+              style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.brand.purple }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                <Ionicons name="flag-outline" size={16} color="#A78BFA" style={{ marginRight: 6 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <Ionicons name="flag-outline" size={16} color={c.brand.purpleLight} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: c.text.secondary, letterSpacing: 0.5, textTransform: "uppercase" }}>
                   Current Focus
                 </Text>
               </View>
-              <Text style={{ fontSize: 15, color: "#EAEDF3", fontWeight: "500" }}>{activeGoals[0].title}</Text>
-              {activeGoals[0].description ? (
-                <Text style={{ fontSize: 13, color: "#5A6178", marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
+              <Text style={{ fontSize: 15, color: c.text.primary, fontWeight: "500" }}>{activeGoals[0].title}</Text>
+              {activeGoals[0].description && (
+                <Text style={{ fontSize: 13, color: c.text.tertiary, marginTop: 4, lineHeight: 18 }} numberOfLines={2}>
                   {activeGoals[0].description}
                 </Text>
-              ) : null}
+              )}
               {activeGoals.length > 1 && (
-                <Text style={{ fontSize: 13, color: "#A78BFA", marginTop: 8, fontWeight: "500" }}>
-                  +{activeGoals.length - 1} more goal{activeGoals.length > 2 ? "s" : ""} →
+                <Text style={{ fontSize: 13, color: c.brand.purpleLight, marginTop: 8, fontWeight: "500" }}>
+                  +{activeGoals.length - 1} more →
                 </Text>
               )}
             </Pressable>
@@ -684,170 +413,46 @@ export default function HomeScreen() {
 
         {/* Evening Reflection CTA */}
         {new Date().getHours() >= 18 && !todaysCheckin?.day_rating && (
-          <Animated.View entering={FadeInDown.delay(350).duration(400)} className="mb-lg">
+          <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable
               onPress={async () => { await hapticLight(); router.push("/evening-reflection"); }}
-              style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#A78BFA30", flexDirection: "row", alignItems: "center" }}
+              style={{
+                backgroundColor: c.bg.surface,
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: `${c.brand.purpleLight}30`,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
             >
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#A78BFA15", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-                <Ionicons name="moon-outline" size={20} color="#A78BFA" />
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${c.brand.purpleLight}15`, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                <Ionicons name="moon-outline" size={20} color={c.brand.purpleLight} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, color: "#EAEDF3", fontWeight: "600" }}>Wind down your day</Text>
-                <Text style={{ fontSize: 13, color: "#5A6178", marginTop: 2 }}>1-minute reflection to close the loop</Text>
+                <Text style={{ fontSize: 15, color: c.text.primary, fontWeight: "600" }}>Wind down your day</Text>
+                <Text style={{ fontSize: 13, color: c.text.tertiary, marginTop: 2 }}>1-minute reflection to close the loop</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#5A6178" />
+              <Ionicons name="chevron-forward" size={16} color={c.text.tertiary} />
             </Pressable>
           </Animated.View>
         )}
 
         {/* Quick Actions */}
-        <Animated.View entering={FadeInDown.delay(400).duration(400)}>
-          <Text style={{ fontSize: 12, fontWeight: "600", color: "#8B92A8", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 12 }}>
-            Quick Actions
-          </Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable
-              onPress={() => router.push("/sos")}
-              style={{
-                flex: 1,
-                backgroundColor: "#1A1F35",
-                borderRadius: 16,
-                paddingVertical: 20,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: "#242A4240",
-              }}
-              accessibilityLabel="Breathing exercise"
-            >
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#14B8A615", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                <Ionicons name="leaf-outline" size={22} color="#2DD4BF" />
-              </View>
-              <Text style={{ fontSize: 13, color: "#8B92A8", fontWeight: "500" }}>Breathe</Text>
-            </Pressable>
-
-            <View style={{
-              flex: 1,
-              backgroundColor: "#1A1F35",
-              borderRadius: 16,
-              paddingVertical: 20,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#242A4240",
-            }}>
-              <VoiceNoteButton />
-            </View>
-
-            <Pressable
-              onPress={() => router.push("/wind-down")}
-              style={{
-                flex: 1,
-                backgroundColor: "#1A1F35",
-                borderRadius: 16,
-                paddingVertical: 20,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: "#242A4240",
-              }}
-              accessibilityLabel="Wind down routine"
-            >
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#7C3AED15", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                <Ionicons name="moon-outline" size={22} color="#A78BFA" />
-              </View>
-              <Text style={{ fontSize: 13, color: "#8B92A8", fontWeight: "500" }}>Wind Down</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
+        <QuickActionsRow
+          onBreathe={() => router.push("/sos")}
+          onWindDown={() => router.push("/wind-down")}
+        />
       </ScrollView>
 
-      {/* Add Habit Modal */}
-      <Modal visible={showAddHabit} transparent animationType="slide" onRequestClose={() => setShowAddHabit(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-          <Pressable onPress={() => setShowAddHabit(false)} style={{ flex: 1, backgroundColor: "#00000080", justifyContent: "flex-end" }}>
-            <Pressable onPress={() => {}} style={{ backgroundColor: "#16161D", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "#3F3F46", alignSelf: "center", marginBottom: 20 }} />
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#F4F4F5", marginBottom: 20 }}>New Habit</Text>
-
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>What do you want to do?</Text>
-              <TextInput
-                value={newHabitTitle}
-                onChangeText={setNewHabitTitle}
-                placeholder="e.g., Meditate for 5 minutes"
-                placeholderTextColor="#52525B"
-                style={{
-                  backgroundColor: "#0C1120",
-                  borderRadius: 12,
-                  padding: 14,
-                  fontSize: 15,
-                  color: "#F4F4F5",
-                  marginBottom: 20,
-                }}
-                autoFocus
-              />
-
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>How often?</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
-                {(["daily", "weekdays", "weekends", "weekly"] as const).map((f) => (
-                  <Pressable
-                    key={f}
-                    onPress={() => setNewHabitFreq(f)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      backgroundColor: newHabitFreq === f ? "#2DD4BF20" : "#0C1120",
-                      borderWidth: 1.5,
-                      borderColor: newHabitFreq === f ? "#2DD4BF" : "#27272A",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: newHabitFreq === f ? "#2DD4BF" : "#71717A", textTransform: "capitalize" }}>{f}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Best time (optional)</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: 28 }}>
-                {([{ key: "morning", emoji: "☀️" }, { key: "afternoon", emoji: "🌤" }, { key: "evening", emoji: "🌙" }] as const).map(({ key, emoji }) => (
-                  <Pressable
-                    key={key}
-                    onPress={() => setNewHabitTime(newHabitTime === key ? null : key)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      backgroundColor: newHabitTime === key ? "#A78BFA20" : "#0C1120",
-                      borderWidth: 1.5,
-                      borderColor: newHabitTime === key ? "#A78BFA" : "#27272A",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ fontSize: 16, marginBottom: 2 }}>{emoji}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: "500", color: newHabitTime === key ? "#A78BFA" : "#71717A", textTransform: "capitalize" }}>{key}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <Pressable
-                onPress={handleAddHabit}
-                disabled={!newHabitTitle.trim() || savingHabit}
-                style={{
-                  backgroundColor: newHabitTitle.trim() ? "#2DD4BF" : "#27272A",
-                  borderRadius: 14,
-                  paddingVertical: 16,
-                  alignItems: "center",
-                }}
-              >
-                {savingHabit ? (
-                  <ActivityIndicator color="#0C1120" />
-                ) : (
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: newHabitTitle.trim() ? "#0C1120" : "#52525B" }}>Start Tracking</Text>
-                )}
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
+      <AddHabitModal
+        visible={showAddHabit}
+        onClose={() => {
+          setShowAddHabit(false);
+          fetchTodayCompletions();
+          useMilestoneStore.getState().checkNewMilestones({ first_habit: true });
+        }}
+      />
     </SafeAreaView>
   );
 }

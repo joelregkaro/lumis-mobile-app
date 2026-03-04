@@ -7,6 +7,7 @@ import {
   getCustomerInfo,
   hasActiveEntitlement,
 } from "@/lib/revenue";
+import { track } from "@/lib/analytics";
 
 interface SubscriptionState {
   isPro: boolean;
@@ -20,8 +21,7 @@ interface SubscriptionState {
   fetchOfferings: () => Promise<void>;
 }
 
-// TODO: remove before production — forces pro mode for development
-const DEV_MODE = true;
+const DEV_MODE = __DEV__;
 
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isPro: DEV_MODE,
@@ -47,6 +47,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
       const result = await purchasePackage(pkg);
       const active = hasActiveEntitlement(result.customerInfo);
       set({ isPro: active, isLoading: false });
+      if (active) track("subscription_purchased");
       return active;
     } catch (e: any) {
       set({ isLoading: false });

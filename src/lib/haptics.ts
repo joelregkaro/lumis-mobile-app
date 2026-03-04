@@ -27,6 +27,11 @@ export async function hapticWarning() {
   await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 }
 
+export async function hapticSelection() {
+  if (!Haptics) return;
+  await Haptics.selectionAsync();
+}
+
 export async function hapticMilestone() {
   if (!Haptics) return;
   await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

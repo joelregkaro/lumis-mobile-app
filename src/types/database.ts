@@ -111,6 +111,17 @@ export interface GoalProgress {
   progress_pct: number;
 }
 
+export interface GoalMilestone {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  title: string;
+  is_completed: boolean;
+  completed_at: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface Pattern {
   id: string;
   user_id: string;
@@ -203,6 +214,9 @@ export interface UserMemoryDoc {
 }
 
 export type HabitFrequency = "daily" | "weekdays" | "weekends" | "weekly" | "custom";
+export type HabitDifficulty = "tiny" | "small" | "medium" | "full";
+export type HabitCueType = "time" | "anchor" | "location" | "emotional";
+export type HabitPhase = "new" | "building" | "forming" | "established" | "lapsed";
 
 export interface Habit {
   id: string;
@@ -217,6 +231,18 @@ export interface Habit {
   total_completions: number;
   source_echo_id: string | null;
   status: "active" | "paused" | "archived";
+  anchor_behavior: string | null;
+  tiny_version: string | null;
+  difficulty: HabitDifficulty;
+  cue_type: HabitCueType | null;
+  category: string | null;
+  identity_statement: string | null;
+  celebration: string | null;
+  ai_suggestion: boolean;
+  lapse_count: number;
+  last_lapse_date: string | null;
+  streak_freezes_remaining: number;
+  streak_freeze_used_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -227,5 +253,18 @@ export interface HabitCompletion {
   user_id: string;
   completed_date: string;
   notes: string | null;
+  created_at: string;
+}
+
+export interface HabitReflection {
+  id: string;
+  habit_id: string;
+  user_id: string;
+  reflection_date: string;
+  reflection_type: "completion" | "lapse" | "milestone";
+  what_worked: string | null;
+  what_blocked: string | null;
+  ai_coaching_note: string | null;
+  difficulty_at_time: string | null;
   created_at: string;
 }

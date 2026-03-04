@@ -85,7 +85,7 @@ export default function CompanionAvatar({
   useEffect(() => {
     breathScale.value = withRepeat(
       withSequence(
-        withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.06, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
         withTiming(1.0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,

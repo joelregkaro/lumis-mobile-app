@@ -2,25 +2,31 @@ import "../../global.css";
 import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as Sentry from "@sentry/react-native";
 import { AppState, Platform, View, ActivityIndicator, Text } from "react-native";
 import { useAuthStore } from "@/store/auth";
 import { useSubscriptionStore } from "@/store/subscription";
 import { useChatStore } from "@/store/chat";
 import { registerPushToken, addNotificationResponseListener } from "@/lib/notifications";
 import { useNetworkStatus } from "@/lib/offline";
+import { initSentry } from "@/lib/sentry";
+import { initAnalytics, identify } from "@/lib/analytics";
+
+initSentry();
 
 if (Platform.OS !== "web") {
   const SplashScreen = require("expo-splash-screen");
   SplashScreen.preventAutoHideAsync();
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { isLoading, initialize, session, user } = useAuthStore();
   const initSubscription = useSubscriptionStore((s) => s.initialize);
   const isConnected = useNetworkStatus();
   const router = useRouter();
 
   useEffect(() => {
+    initAnalytics();
     initialize().then(() => {
       if (Platform.OS !== "web") {
         const SplashScreen = require("expo-splash-screen");
@@ -33,6 +39,7 @@ export default function RootLayout() {
     if (session) {
       registerPushToken().catch(() => {});
       initSubscription(user?.id).catch(() => {});
+      if (user?.id) identify(user.id, { email: user.email });
     }
   }, [session]);
 
@@ -88,6 +95,11 @@ export default function RootLayout() {
           }
           break;
         case "habit_reminder":
+          router.push("/(tabs)/home");
+          break;
+        case "habit_milestone":
+          router.push("/habits");
+          break;
         case "momentum_celebration":
         case "absence_detection":
           router.push("/(tabs)/home");
@@ -107,7 +119,6 @@ export default function RootLayout() {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0C1120" }}>
         <ActivityIndicator size="large" color="#7C3AED" />
-        <Text style={{ color: "#8B92A8", marginTop: 16, fontSize: 16 }}>Loading Lumis...</Text>
       </View>
     );
   }
@@ -157,8 +168,15 @@ export default function RootLayout() {
         <Stack.Screen name="evening-reflection" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="commitment-response" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="life-wheel" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="human-score" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="human-score-share" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="habits" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom", presentation: "fullScreenModal" }} />
+        <Stack.Screen name="privacy" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="terms" options={{ animation: "slide_from_right" }} />
       </Stack>
     </>
   );
 }
+
+export default Sentry.wrap(RootLayout);

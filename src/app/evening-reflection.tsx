@@ -1,224 +1,255 @@
-import { useState } from "react";
-import { View, Text, Pressable, TextInput, ScrollView } from "react-native";
+import React, { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useDailyCheckinStore } from "@/store/dailyCheckin";
-import { useStreakStore } from "@/store/streak";
-import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import * as Haptics from "expo-haptics";
 
-const RATING_EMOJIS = ["😞", "😔", "😐", "🙂", "😊", "😄", "🤩", "💪", "🌟", "🔥"];
+const RATINGS = [
+  { value: 1, emoji: "😔", label: "Rough" },
+  { value: 3, emoji: "😐", label: "Meh" },
+  { value: 5, emoji: "🙂", label: "Okay" },
+  { value: 7, emoji: "😊", label: "Good" },
+  { value: 9, emoji: "🤩", label: "Great" },
+];
 
 export default function EveningReflectionScreen() {
-  const router = useRouter();
-  const todaysCheckin = useDailyCheckinStore((s) => s.todaysCheckin);
-  const setEveningReflection = useDailyCheckinStore((s) => s.setEveningReflection);
-  const updateStreak = useStreakStore((s) => s.updateStreak);
+  const { todaysCheckin, setEveningReflection, fetchToday } = useDailyCheckinStore();
 
-  const [step, setStep] = useState(1);
-  const [completed, setCompleted] = useState<boolean | null>(null);
+  const [step, setStep] = useState(0);
+  const [rating, setRating] = useState(0);
+  const [wins, setWins] = useState<string[]>([]);
+  const [winInput, setWinInput] = useState("");
   const [reflection, setReflection] = useState("");
-  const [rating, setRating] = useState(5);
+  const [intentionDone, setIntentionDone] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const intention = todaysCheckin?.morning_intention;
+  const hasIntention = !!todaysCheckin?.morning_intention;
 
-  const handleSave = async () => {
+  const haptic = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const addWin = useCallback(() => {
+    if (winInput.trim()) {
+      setWins((prev) => [...prev, winInput.trim()]);
+      setWinInput("");
+    }
+  }, [winInput]);
+
+  const save = useCallback(async () => {
     setSaving(true);
-    await hapticSuccess();
-    await setEveningReflection(
-      reflection,
-      completed,
-      reflection ? [reflection] : [],
-      rating,
-    );
-    await updateStreak();
+    await setEveningReflection(reflection, intentionDone, wins, rating);
+    await fetchToday();
     setSaving(false);
     router.back();
-  };
+  }, [reflection, intentionDone, wins, rating]);
 
   return (
-    <SafeAreaView className="flex-1 bg-bg-primary" edges={["top", "bottom"]}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => router.back()} hitSlop={16}>
-          <Ionicons name="close" size={24} color="#A1A1AA" />
-        </Pressable>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#F4F4F5" }}>Evening Reflection</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        {/* Step 1: Did you do the thing? */}
-        {step >= 1 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 24 }}>
-            <View style={{ alignItems: "center", marginVertical: 20 }}>
-              <Ionicons name="moon-outline" size={40} color="#A78BFA" />
-              <Text style={{ fontSize: 22, fontWeight: "700", color: "#F4F4F5", marginTop: 12, textAlign: "center" }}>
-                How was today?
+    <LinearGradient colors={["#0B0F1A", "#111827", "#0B0F1A"]} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+              <Pressable onPress={() => router.back()}>
+                <Text style={{ color: "#5A6178", fontSize: 16 }}>Cancel</Text>
+              </Pressable>
+              <Text style={{ color: "#EAEDF3", fontSize: 18, fontWeight: "700" }}>
+                Evening Reflection
               </Text>
+              <View style={{ width: 48 }} />
             </View>
 
-            {intention && (
-              <View style={{ backgroundColor: "#1E1E27", borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 3, borderLeftColor: "#8B5CF6" }}>
-                <Text style={{ fontSize: 12, color: "#A1A1AA", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                  This morning you said
+            {/* Step 1: Day Rating */}
+            {step >= 0 && (
+              <Animated.View entering={FadeInDown.duration(400)}>
+                <Text style={{ color: "#EAEDF3", fontSize: 20, fontWeight: "600", marginBottom: 6 }}>
+                  How was your day?
                 </Text>
-                <Text style={{ fontSize: 16, color: "#F4F4F5", fontWeight: "500" }}>"{intention}"</Text>
-
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-                  {(["yes", "partially", "no"] as const).map((val) => {
-                    const labels = { yes: "Did it", partially: "Partially", no: "Not today" };
-                    const colors = { yes: "#2DD4BF", partially: "#FBBF24", no: "#71717A" };
-                    const isSelected = completed === (val === "yes" ? true : val === "no" ? false : null);
-                    return (
-                      <Pressable
-                        key={val}
-                        onPress={async () => {
-                          await hapticLight();
-                          setCompleted(val === "yes" ? true : val === "no" ? false : null);
-                          if (step === 1) setStep(2);
-                        }}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 12,
-                          borderRadius: 12,
-                          alignItems: "center",
-                          backgroundColor: isSelected ? colors[val] + "20" : "#16161D",
-                          borderWidth: 1,
-                          borderColor: isSelected ? colors[val] + "60" : "#27272A40",
-                        }}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: isSelected ? colors[val] : "#A1A1AA" }}>
-                          {labels[val]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <Text style={{ color: "#5A6178", fontSize: 14, marginBottom: 16 }}>
+                  No right answer. Just check in with yourself.
+                </Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 28 }}>
+                  {RATINGS.map((r) => (
+                    <Pressable
+                      key={r.value}
+                      onPress={() => { haptic(); setRating(r.value); if (step === 0) setTimeout(() => setStep(1), 300); }}
+                      style={{
+                        alignItems: "center",
+                        opacity: rating === 0 || rating === r.value ? 1 : 0.4,
+                        transform: [{ scale: rating === r.value ? 1.2 : 1 }],
+                      }}
+                    >
+                      <Text style={{ fontSize: 32 }}>{r.emoji}</Text>
+                      <Text style={{ color: rating === r.value ? "#EAEDF3" : "#5A6178", fontSize: 12, marginTop: 4 }}>
+                        {r.label}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
-              </View>
+              </Animated.View>
             )}
 
-            {!intention && step === 1 && (
-              <Pressable
-                onPress={() => setStep(2)}
-                style={{ alignSelf: "center", paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#8B5CF620", borderRadius: 12 }}
-              >
-                <Text style={{ fontSize: 14, color: "#A78BFA", fontWeight: "500" }}>Continue</Text>
-              </Pressable>
+            {/* Step 2: Morning Intention Follow-up */}
+            {step >= 1 && hasIntention && (
+              <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 28 }}>
+                <Text style={{ color: "#EAEDF3", fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+                  This morning you said:
+                </Text>
+                <View style={{ backgroundColor: "#1A1F35", borderRadius: 12, padding: 14, borderLeftWidth: 3, borderLeftColor: "#FBBF24", marginBottom: 12 }}>
+                  <Text style={{ color: "#EAEDF3", fontSize: 15, fontStyle: "italic" }}>
+                    "{todaysCheckin?.morning_intention}"
+                  </Text>
+                </View>
+                <Text style={{ color: "#5A6178", fontSize: 14, marginBottom: 10 }}>Did you follow through?</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  {[
+                    { val: true, label: "Yes", color: "#2DD4BF" },
+                    { val: false, label: "Not quite", color: "#F87171" },
+                    { val: null, label: "Partly", color: "#A78BFA" },
+                  ].map((opt) => (
+                    <Pressable
+                      key={String(opt.val)}
+                      onPress={() => { haptic(); setIntentionDone(opt.val); if (step === 1) setTimeout(() => setStep(2), 300); }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: intentionDone === opt.val ? opt.color + "30" : "#1A1F35",
+                        borderRadius: 10,
+                        padding: 12,
+                        alignItems: "center",
+                        borderWidth: intentionDone === opt.val ? 1 : 0,
+                        borderColor: opt.color,
+                      }}
+                    >
+                      <Text style={{ color: intentionDone === opt.val ? opt.color : "#EAEDF3", fontWeight: "600" }}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </Animated.View>
             )}
-          </Animated.View>
-        )}
 
-        {/* Step 2: What went well? */}
-        {step >= 2 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 17, fontWeight: "600", color: "#F4F4F5", marginBottom: 10 }}>
-              What went well today?
-            </Text>
-            <TextInput
-              value={reflection}
-              onChangeText={setReflection}
-              placeholder="Even small wins count..."
-              placeholderTextColor="#52525B"
-              multiline
-              style={{
-                backgroundColor: "#1E1E27",
-                borderRadius: 14,
-                padding: 16,
-                fontSize: 15,
-                color: "#F4F4F5",
-                minHeight: 80,
-                textAlignVertical: "top",
-                borderWidth: 1,
-                borderColor: "#27272A40",
-              }}
-            />
-            {step === 2 && (
-              <Pressable
-                onPress={() => setStep(3)}
-                style={{ alignSelf: "flex-end", marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#8B5CF620", borderRadius: 12 }}
-              >
-                <Text style={{ fontSize: 14, color: "#A78BFA", fontWeight: "500" }}>Next</Text>
-              </Pressable>
-            )}
-          </Animated.View>
-        )}
+            {/* Auto-advance if no intention */}
+            {step >= 1 && !hasIntention && step < 2 && (() => { setTimeout(() => setStep(2), 100); return null; })()}
 
-        {/* Step 3: Day rating */}
-        {step >= 3 && (
-          <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 32 }}>
-            <Text style={{ fontSize: 17, fontWeight: "600", color: "#F4F4F5", marginBottom: 6 }}>
-              Rate your day
-            </Text>
-            <Text style={{ fontSize: 13, color: "#71717A", marginBottom: 16 }}>
-              No judgment — just a snapshot.
-            </Text>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-              {RATING_EMOJIS.map((emoji, i) => {
-                const val = i + 1;
-                const isSelected = rating === val;
-                return (
-                  <Pressable
-                    key={val}
-                    onPress={async () => {
-                      await hapticLight();
-                      setRating(val);
-                    }}
+            {/* Step 3: Wins */}
+            {step >= 2 && (
+              <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 28 }}>
+                <Text style={{ color: "#EAEDF3", fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+                  Any wins today? Even small ones count.
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                  <TextInput
+                    value={winInput}
+                    onChangeText={setWinInput}
+                    placeholder="e.g. Took a walk at lunch"
+                    placeholderTextColor="#5A6178"
                     style={{
-                      width: 32,
-                      height: 40,
+                      flex: 1,
+                      backgroundColor: "#1A1F35",
                       borderRadius: 10,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: isSelected ? "#8B5CF620" : "transparent",
-                      borderWidth: isSelected ? 1 : 0,
-                      borderColor: "#8B5CF660",
+                      padding: 12,
+                      color: "#EAEDF3",
+                      fontSize: 15,
                     }}
+                    onSubmitEditing={addWin}
+                    returnKeyType="done"
+                  />
+                  <Pressable
+                    onPress={addWin}
+                    style={{ backgroundColor: "#A78BFA30", borderRadius: 10, padding: 12, justifyContent: "center" }}
                   >
-                    <Text style={{ fontSize: isSelected ? 22 : 16, opacity: isSelected ? 1 : 0.5 }}>{emoji}</Text>
+                    <Text style={{ color: "#A78BFA", fontWeight: "700", fontSize: 16 }}>+</Text>
                   </Pressable>
-                );
-              })}
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 11, color: "#52525B" }}>Tough</Text>
-              <Text style={{ fontSize: 11, color: "#52525B" }}>Amazing</Text>
-            </View>
+                </View>
+                {wins.map((w, i) => (
+                  <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <Text style={{ color: "#2DD4BF" }}>✓</Text>
+                    <Text style={{ color: "#EAEDF3", fontSize: 14 }}>{w}</Text>
+                  </View>
+                ))}
+                {step === 2 && (
+                  <Pressable
+                    onPress={() => setStep(3)}
+                    style={{ marginTop: 12, alignSelf: "flex-end" }}
+                  >
+                    <Text style={{ color: "#A78BFA", fontSize: 14, fontWeight: "600" }}>
+                      {wins.length > 0 ? "Next →" : "Skip →"}
+                    </Text>
+                  </Pressable>
+                )}
+              </Animated.View>
+            )}
 
-            <Pressable
-              onPress={handleSave}
-              disabled={saving}
-              style={{
-                marginTop: 28,
-                backgroundColor: "#8B5CF6",
-                borderRadius: 16,
-                paddingVertical: 16,
-                alignItems: "center",
-                opacity: saving ? 0.6 : 1,
-              }}
-            >
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "white" }}>
-                {saving ? "Saving..." : "Wrap Up the Day"}
-              </Text>
-            </Pressable>
+            {/* Step 4: Free Reflection */}
+            {step >= 3 && (
+              <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 28 }}>
+                <Text style={{ color: "#EAEDF3", fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+                  Anything on your mind before bed?
+                </Text>
+                <Text style={{ color: "#5A6178", fontSize: 13, marginBottom: 10 }}>
+                  Optional — even a sentence helps you process the day.
+                </Text>
+                <TextInput
+                  value={reflection}
+                  onChangeText={setReflection}
+                  placeholder="Write freely..."
+                  placeholderTextColor="#5A6178"
+                  multiline
+                  style={{
+                    backgroundColor: "#1A1F35",
+                    borderRadius: 12,
+                    padding: 14,
+                    color: "#EAEDF3",
+                    fontSize: 15,
+                    minHeight: 100,
+                    textAlignVertical: "top",
+                  }}
+                />
+              </Animated.View>
+            )}
 
-            <Pressable
-              onPress={() => {
-                handleSave().then(() => {
-                  router.replace("/(tabs)/chat");
-                });
-              }}
-              style={{ alignSelf: "center", marginTop: 14, paddingVertical: 8 }}
-            >
-              <Text style={{ fontSize: 14, color: "#A78BFA", fontWeight: "500" }}>
-                Or talk about my day first →
-              </Text>
-            </Pressable>
-          </Animated.View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            {/* Save Button */}
+            {step >= 3 && (
+              <Animated.View entering={FadeInUp.duration(400)}>
+                <Pressable
+                  onPress={save}
+                  disabled={saving || rating === 0}
+                  style={{
+                    backgroundColor: rating > 0 ? "#A78BFA" : "#3A3F52",
+                    borderRadius: 14,
+                    padding: 16,
+                    alignItems: "center",
+                    opacity: saving ? 0.6 : 1,
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>
+                    {saving ? "Saving..." : "Done for today ✨"}
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }

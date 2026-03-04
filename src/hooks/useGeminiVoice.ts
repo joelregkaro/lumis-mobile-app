@@ -58,6 +58,11 @@ export function useGeminiVoice({
   const isSourceStartedRef = useRef(false);
   const isMutedRef = useRef(false);
   const isSpeakingRef = useRef(false);
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTokenRef = useRef<string | null>(null);
+  const lastPromptRef = useRef<string | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const intentionalCloseRef = useRef(false);
 
   // Buffer accumulation for smoother playback
   const pendingPcmRef = useRef<Uint8Array[]>([]);
@@ -220,6 +225,9 @@ export function useGeminiVoice({
     async (token: string, systemPrompt?: string) => {
       try {
         updateStatus("connecting");
+        lastTokenRef.current = token;
+        lastPromptRef.current = systemPrompt ?? null;
+        intentionalCloseRef.current = false;
 
         if (!AudioContext || !ExpoAudioStreamModule) {
           updateStatus("error");
@@ -286,7 +294,25 @@ export function useGeminiVoice({
             if (data.setupComplete) {
               setIsConnected(true);
               updateStatus("connected");
+              reconnectAttemptsRef.current = 0;
               console.log("[GeminiVoice] Setup complete, starting mic...");
+
+              // Keep-alive: send a silent audio frame every 15s to prevent idle timeout
+              if (keepAliveRef.current) clearInterval(keepAliveRef.current);
+              keepAliveRef.current = setInterval(() => {
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                  // 320 bytes = 10ms of 16kHz 16-bit mono silence
+                  const silence = new Uint8Array(320);
+                  const b64 = base64js.fromByteArray(silence);
+                  wsRef.current.send(
+                    JSON.stringify({
+                      realtimeInput: {
+                        audio: { mimeType: "audio/pcm;rate=16000", data: b64 },
+                      },
+                    }),
+                  );
+                }
+              }, 15000);
 
               ws.send(JSON.stringify({
                 clientContent: {
@@ -404,9 +430,12 @@ export function useGeminiVoice({
 
         ws.onclose = async (e: any) => {
           console.log("[GeminiVoice] WS closed, code:", e?.code, "reason:", e?.reason);
+          if (keepAliveRef.current) {
+            clearInterval(keepAliveRef.current);
+            keepAliveRef.current = null;
+          }
           setIsConnected(false);
           setIsSpeaking(false);
-          if (status !== "error") updateStatus("idle");
           wsRef.current = null;
           try {
             await Promise.race([
@@ -414,6 +443,25 @@ export function useGeminiVoice({
               new Promise((resolve) => setTimeout(resolve, 2000)),
             ]);
           } catch {}
+
+          // Auto-reconnect on unexpected close (up to 2 attempts)
+          if (
+            !intentionalCloseRef.current &&
+            reconnectAttemptsRef.current < 2 &&
+            lastTokenRef.current
+          ) {
+            reconnectAttemptsRef.current += 1;
+            console.log("[GeminiVoice] Auto-reconnecting, attempt", reconnectAttemptsRef.current);
+            updateStatus("connecting");
+            setTimeout(() => {
+              connect(lastTokenRef.current!, lastPromptRef.current ?? undefined);
+            }, 1000);
+          } else if (!intentionalCloseRef.current) {
+            updateStatus("error");
+            onError?.("Voice connection lost. Please start a new session.");
+          } else {
+            updateStatus("idle");
+          }
         };
 
         ws.onerror = (e: any) => {
@@ -442,6 +490,14 @@ export function useGeminiVoice({
   );
 
   const disconnect = useCallback(async () => {
+    intentionalCloseRef.current = true;
+    reconnectAttemptsRef.current = 0;
+
+    if (keepAliveRef.current) {
+      clearInterval(keepAliveRef.current);
+      keepAliveRef.current = null;
+    }
+
     if (wsRef.current) {
       wsRef.current.onclose = null;
       wsRef.current.onerror = null;
@@ -485,6 +541,7 @@ export function useGeminiVoice({
 
   useEffect(() => {
     return () => {
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current);
       if (wsRef.current) wsRef.current.close();
       if (audioSourceRef.current) {
         try { audioSourceRef.current.stop(); audioSourceRef.current.disconnect(); } catch {}

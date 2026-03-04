@@ -3,10 +3,12 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  created_at?: string;
   isStreaming?: boolean;
   crisisScore?: number;
   quickReplies?: string[];
   exerciseCard?: ExerciseCard;
+  error?: boolean;
 }
 
 export interface ExerciseCard {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -139,12 +140,27 @@ export default function MeScreen() {
   const [visionText, setVisionText] = useState(profile?.future_self_vision ?? "");
   const [editingName, setEditingName] = useState(false);
   const [nameText, setNameText] = useState(profile?.display_name ?? "");
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const loadAllData = useCallback(async () => {
+    await Promise.all([
+      fetchMemoryDoc(),
+      fetchMemories(),
+      fetchReferralStatus(),
+      fetchProfile(),
+    ]).catch(() => {});
+  }, [fetchMemoryDoc, fetchMemories, fetchReferralStatus, fetchProfile]);
 
   useEffect(() => {
-    fetchMemoryDoc();
-    fetchMemories();
-    fetchReferralStatus();
-  }, []);
+    loadAllData().finally(() => setInitialLoading(false));
+  }, [loadAllData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAllData();
+    setRefreshing(false);
+  }, [loadAllData]);
 
   const handleDelete = (id: string) => {
     Alert.alert("Delete memory", "Are you sure?", [
@@ -211,9 +227,21 @@ export default function MeScreen() {
     );
   };
 
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#0D0D12", alignItems: "center", justifyContent: "center" }} edges={["top"]}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0D0D12" }} edges={["top"]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#7C3AED" />}
+      >
         {/* Profile Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 }}>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
@@ -574,7 +602,8 @@ export default function MeScreen() {
                 </Text>
               }
             />
-            <SettingsRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => Linking.openURL("https://lumis.app/privacy")} />
+            <SettingsRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => router.push("/privacy")} />
+            <SettingsRow icon="document-text-outline" label="Terms of Service" onPress={() => router.push("/terms")} />
             <SettingsRow icon="download-outline" label="Export My Data" onPress={handleExportData} loading={isExporting} />
             <SettingsRow icon="log-out-outline" label="Sign Out" onPress={handleSignOut} destructive />
           </View>

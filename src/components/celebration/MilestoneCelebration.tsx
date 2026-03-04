@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { hapticMilestone } from "@/lib/haptics";
+import { colors } from "@/constants/theme";
 
 const MILESTONE_LABELS: Record<string, { emoji: string; title: string; subtitle: string }> = {
   first_session: {
@@ -65,6 +66,31 @@ const MILESTONE_LABELS: Record<string, { emoji: string; title: string; subtitle:
     title: "Lumis Evolved: Luminary!",
     subtitle: "Maximum radiance. You and Lumis have built something extraordinary.",
   },
+  habit_streak_7: {
+    emoji: "🔥",
+    title: "7-Day Habit Streak!",
+    subtitle: "A full week of showing up. Consistency is your superpower.",
+  },
+  habit_streak_14: {
+    emoji: "⭐",
+    title: "14-Day Habit Streak!",
+    subtitle: "Two weeks strong. This is becoming part of who you are.",
+  },
+  habit_streak_21: {
+    emoji: "💪",
+    title: "21-Day Habit Streak!",
+    subtitle: "Three weeks — the science says you've built a real habit.",
+  },
+  habit_streak_30: {
+    emoji: "💎",
+    title: "30-Day Habit Streak!",
+    subtitle: "A whole month. That takes serious dedication.",
+  },
+  first_habit: {
+    emoji: "🌱",
+    title: "First Habit Created!",
+    subtitle: "Small daily actions build extraordinary lives.",
+  },
 };
 
 interface Props {
@@ -123,16 +149,16 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.75)",
+    backgroundColor: "rgba(0,0,0,0.8)",
   },
   card: {
-    backgroundColor: "#1A1F35",
+    backgroundColor: colors.dark.bg.surface,
     borderRadius: 24,
     padding: 32,
     alignItems: "center",
     marginHorizontal: 32,
     borderWidth: 1,
-    borderColor: "#F5C54240",
+    borderColor: `${colors.dark.brand.gold}40`,
   },
   emoji: {
     fontSize: 48,
@@ -141,27 +167,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#F5C542",
+    color: colors.dark.brand.gold,
     textAlign: "center",
     marginTop: 16,
   },
   subtitle: {
     fontSize: 15,
-    color: "#8B92A8",
+    color: colors.dark.text.secondary,
     textAlign: "center",
     marginTop: 8,
     lineHeight: 22,
   },
   button: {
     marginTop: 24,
-    backgroundColor: "#F5C54220",
+    backgroundColor: `${colors.dark.brand.gold}20`,
     paddingHorizontal: 32,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 16,
+    minWidth: 120,
+    alignItems: "center",
   },
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#F5C542",
+    color: colors.dark.brand.gold,
   },
 });

@@ -1,20 +1,28 @@
-import { Tabs } from "expo-router";
-import { View, Platform } from "react-native";
+import { Tabs, useRouter } from "expo-router";
+import { View, Pressable, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import { colors } from "@/constants/theme";
+import { hapticLight } from "@/lib/haptics";
+
+const c = colors.dark;
 
 const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; default: keyof typeof Ionicons.glyphMap }> = {
-  home: { focused: "home", default: "home-outline" },
+  home: { focused: "today", default: "today-outline" },
   chat: { focused: "chatbubble-ellipses", default: "chatbubble-ellipses-outline" },
-  growth: { focused: "stats-chart", default: "stats-chart-outline" },
+  growth: { focused: "leaf", default: "leaf-outline" },
   me: { focused: "person", default: "person-outline" },
 };
 
 const TAB_LABELS: Record<string, string> = {
-  home: "Home",
-  chat: "Talk",
-  growth: "Progress",
-  me: "Profile",
+  home: "Today",
+  chat: "Chat",
+  growth: "Growth",
+  me: "Me",
 };
 
 export default function TabLayout() {
@@ -22,7 +30,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           const icons = TAB_ICONS[route.name] ?? TAB_ICONS.home;
           return (
             <View style={{ alignItems: "center", paddingTop: 4 }}>
@@ -34,7 +42,7 @@ export default function TabLayout() {
                     width: 24,
                     height: 3,
                     borderRadius: 2,
-                    backgroundColor: colors.dark.brand.purple,
+                    backgroundColor: c.brand.purple,
                   }}
                 />
               )}
@@ -49,16 +57,16 @@ export default function TabLayout() {
         },
         tabBarLabel: TAB_LABELS[route.name] ?? route.name,
         tabBarStyle: {
-          backgroundColor: "#0D0D12",
-          borderTopColor: "#1E1E27",
+          backgroundColor: c.bg.primary,
+          borderTopColor: c.bg.surface,
           borderTopWidth: 0.5,
           height: Platform.OS === "ios" ? 88 : 64,
           paddingBottom: Platform.OS === "ios" ? 28 : 8,
           paddingTop: 4,
           elevation: 0,
         },
-        tabBarActiveTintColor: colors.dark.brand.purple,
-        tabBarInactiveTintColor: "#71717A",
+        tabBarActiveTintColor: c.brand.purple,
+        tabBarInactiveTintColor: c.text.tertiary,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "500",

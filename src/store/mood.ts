@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 import type { MoodEntry } from "@/types/database";
 
 interface MoodState {
@@ -40,6 +41,7 @@ export const useMoodStore = create<MoodState>((set) => ({
 
     if (!error && data) {
       set({ todaysMood: data as MoodEntry });
+      track("mood_logged");
     }
   },
 

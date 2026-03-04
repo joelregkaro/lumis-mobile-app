@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import { withRetry } from "@/lib/retry";
 import { isOnline } from "@/lib/offline";
+import { track } from "@/lib/analytics";
 import type { ChatMessage, SOSMode } from "@/types/chat";
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
@@ -172,6 +173,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
         return { messages: msgs, isStreaming: false };
       });
+
+      track("message_sent");
     } catch (error) {
       set((state) => {
         const msgs = state.messages.filter((m) => m.id !== assistantPlaceholder.id);
@@ -274,6 +277,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       );
     } catch { /* fire-and-forget */ }
 
+    track("session_ended");
     set({ currentSessionId: null });
   },
 
