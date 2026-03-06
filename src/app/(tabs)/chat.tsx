@@ -16,12 +16,14 @@ import MessageBubble from "@/components/chat/MessageBubble";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import QuickReplies from "@/components/chat/QuickReplies";
 import SessionCoolDown from "@/components/chat/SessionCoolDown";
+import FirstReadModal from "@/components/blueprint/FirstReadModal";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useChatStore } from "@/store/chat";
 import { useSubscriptionStore } from "@/store/subscription";
 import { useAuthStore } from "@/store/auth";
 import { useEchoStore } from "@/store/echo";
 import { useGoalStore } from "@/store/goals";
+import { supabase } from "@/lib/supabase";
 import { hapticLight } from "@/lib/haptics";
 import { colors } from "@/constants/theme";
 import type { ChatMessage } from "@/types/chat";
@@ -38,7 +40,8 @@ function getTimeGreeting(): string {
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { topic } = useLocalSearchParams<{ topic?: string }>();
+  const { topic, journalMode } = useLocalSearchParams<{ topic?: string; journalMode?: string }>();
+  const isJournalMode = journalMode === "true";
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const [inputText, setInputText] = useState(topic ? decodeURIComponent(topic) : "");
   const isAtBottomRef = useRef(true);
@@ -57,6 +60,37 @@ export default function ChatScreen() {
   const { pendingEchoes } = useEchoStore();
   const { goals } = useGoalStore();
   const [disclaimerDismissed, setDisclaimerDismissed] = useState(false);
+  const [firstReadData, setFirstReadData] = useState<{ noticed: string[]; surprised_me: string; next_question: string } | null>(null);
+  const [showFirstRead, setShowFirstRead] = useState(false);
+
+  // Check for First Read card after first session completes
+  useEffect(() => {
+    if (!completedSession || completedSession.sessionNumber !== 1) return;
+    let cancelled = false;
+    const checkFirstRead = async () => {
+      // Poll briefly — process-session may still be running
+      for (let i = 0; i < 5; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        if (cancelled) return;
+        const { data } = await supabase
+          .from("insight_cards")
+          .select("data")
+          .eq("user_id", profile?.id)
+          .eq("card_type", "first_read")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (data?.data?.noticed) {
+          setFirstReadData(data.data);
+          setShowFirstRead(true);
+          return;
+        }
+      }
+    };
+    checkFirstRead();
+    return () => { cancelled = true; };
+  }, [completedSession, profile?.id]);
+
   const companionName = profile?.companion_name ?? "Lumis";
   const displayName = profile?.display_name ?? "";
   const lastMessage = messages[messages.length - 1];
@@ -104,6 +138,8 @@ export default function ChatScreen() {
     return starters.slice(0, 4);
   }, [pendingEchoes, goals]);
 
+  const journalOpts = isJournalMode ? { sessionType: "journal" as const } : undefined;
+
   const handleSend = useCallback(async () => {
     const text = inputText.trim();
     if (!text || isStreaming) return;
@@ -112,22 +148,22 @@ export default function ChatScreen() {
     setInputText("");
 
     try {
-      await sendMessage(text);
+      await sendMessage(text, journalOpts);
     } catch {
       // handled by store
     }
-  }, [inputText, isStreaming, sendMessage]);
+  }, [inputText, isStreaming, sendMessage, journalOpts]);
 
   const handleQuickReply = useCallback(
     async (reply: string) => {
       if (isStreaming) return;
       try {
-        await sendMessage(reply);
+        await sendMessage(reply, journalOpts);
       } catch {
         // handled by store
       }
     },
-    [isStreaming, sendMessage],
+    [isStreaming, sendMessage, journalOpts],
   );
 
   const handleStarterTap = useCallback(
@@ -135,12 +171,12 @@ export default function ChatScreen() {
       if (isStreaming) return;
       await hapticLight();
       try {
-        await sendMessage(starter);
+        await sendMessage(starter, journalOpts);
       } catch {
         // handled by store
       }
     },
-    [isStreaming, sendMessage],
+    [isStreaming, sendMessage, journalOpts],
   );
 
   const renderMessage = useCallback(
@@ -258,10 +294,12 @@ export default function ChatScreen() {
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40 }}>
               <CompanionAvatar expression="warm" size="medium" />
               <Text style={{ fontSize: 20, fontWeight: "600", color: c.text.primary, marginTop: 20 }}>
-                {getTimeGreeting()}{displayName ? `, ${displayName}` : ""}
+                {isJournalMode ? "Journal Mode" : `${getTimeGreeting()}${displayName ? `, ${displayName}` : ""}`}
               </Text>
               <Text style={{ fontSize: 15, color: c.text.secondary, textAlign: "center", marginTop: 8, lineHeight: 22 }}>
-                What's on your mind?{"\n"}I'm here to listen.
+                {isJournalMode
+                  ? "Write freely. I'll ask questions\nto help you explore your thoughts."
+                  : "What's on your mind?\nI'm here to listen."}
               </Text>
               {/* Contextual conversation starters */}
               <View style={{ marginTop: 24, width: "100%", gap: 8, paddingHorizontal: 8 }}>
@@ -376,6 +414,14 @@ export default function ChatScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {firstReadData && (
+        <FirstReadModal
+          visible={showFirstRead}
+          data={firstReadData}
+          onDismiss={() => setShowFirstRead(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

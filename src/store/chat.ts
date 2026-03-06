@@ -25,7 +25,7 @@ interface ChatState {
   completedSession: CompletedSessionSummary | null;
   showPaywall: boolean;
 
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, options?: { sessionType?: "journal" }) => Promise<void>;
   startNewSession: () => Promise<void>;
   loadLatestSession: () => Promise<void>;
   loadSession: (sessionId: string) => Promise<void>;
@@ -47,7 +47,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   completedSession: null,
   showPaywall: false,
 
-  sendMessage: async (content: string) => {
+  sendMessage: async (content: string, options?: { sessionType?: "journal" }) => {
     const connected = await isOnline();
     if (!connected) {
       const offlineMsg: ChatMessage = {
@@ -103,6 +103,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
             body: JSON.stringify({
               message: content,
               session_id: currentSessionId,
+              ...(options?.sessionType && !currentSessionId
+                ? { session_type: options.sessionType }
+                : {}),
             }),
           },
         );

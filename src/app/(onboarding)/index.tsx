@@ -28,6 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useAuthStore } from "@/store/auth";
 import { useLifeDomainsStore, DOMAIN_META, ALL_DOMAINS } from "@/store/lifeDomains";
@@ -37,6 +38,8 @@ import { supabase } from "@/lib/supabase";
 import { track } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
 import type { LifeDomainType } from "@/types/database";
+
+const BLUEPRINT_STORAGE_KEY = "lumis_blueprint_data";
 
 const c = colors.dark;
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -164,6 +167,25 @@ function BreathingCircle() {
   );
 }
 
+// Map blueprint domain quick-rate (1-3) to 1-10 scores for life_domains
+const BLUEPRINT_DOMAIN_MAP: Record<number, number> = { 1: 3, 2: 5, 3: 8 };
+
+// Map blueprint Q1 answer to stress response label
+const BLUEPRINT_STRESS_MAP: Record<number, string> = {
+  1: "Push through",
+  2: "Push through",
+  3: "Pretend it's fine",
+  4: "Spiral (okay, a lot)",
+};
+
+// Map blueprint Q7 answer to reason label
+const BLUEPRINT_REASON_MAP: Record<number, string> = {
+  1: "I want to grow",
+  2: "I want to grow",
+  3: "I'm feeling stressed",
+  4: "Just exploring",
+};
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const { user, setOnboarded, fetchProfile } = useAuthStore();
@@ -179,15 +201,67 @@ export default function OnboardingScreen() {
   );
   const [futureVision, setFutureVision] = useState("");
   const [hasConsented, setHasConsented] = useState(false);
+  const [skippedSteps, setSkippedSteps] = useState<Set<number>>(new Set());
+
+  // Load blueprint data and pre-populate + skip redundant steps
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(BLUEPRINT_STORAGE_KEY);
+        if (!raw) return;
+        const bp = JSON.parse(raw);
+        const skip = new Set<number>();
+
+        if (bp.answers?.[7]) {
+          const mappedReason = BLUEPRINT_REASON_MAP[bp.answers[7]];
+          if (mappedReason) {
+            setReason(mappedReason);
+            skip.add(2);
+          }
+        }
+
+        if (bp.answers?.[1]) {
+          const mappedStress = BLUEPRINT_STRESS_MAP[bp.answers[1]];
+          if (mappedStress) {
+            setStressResponse(mappedStress);
+            skip.add(4);
+          }
+        }
+
+        if (bp.domainRatings) {
+          const mapped: Record<string, number> = {};
+          for (const [domain, rating] of Object.entries(bp.domainRatings)) {
+            mapped[domain] = BLUEPRINT_DOMAIN_MAP[rating as number] ?? 5;
+          }
+          setDomainScores((prev) => ({ ...prev, ...mapped } as Record<LifeDomainType, number>));
+          skip.add(6);
+        }
+
+        setSkippedSteps(skip);
+      } catch {}
+    })();
+  }, []);
+
+  const nextStep = (from: number): Step => {
+    let s = from + 1;
+    while (s <= TOTAL_STEPS && skippedSteps.has(s)) s++;
+    return Math.min(s, TOTAL_STEPS) as Step;
+  };
+
+  const prevStep = (from: number): Step => {
+    let s = from - 1;
+    while (s >= 1 && skippedSteps.has(s)) s--;
+    return Math.max(s, 1) as Step;
+  };
 
   const next = async () => {
     await hapticLight();
-    if (step < TOTAL_STEPS) setStep((s) => (s + 1) as Step);
+    if (step < TOTAL_STEPS) setStep(nextStep(step));
   };
 
   const prev = async () => {
     await hapticLight();
-    if (step > 1) setStep((s) => (s - 1) as Step);
+    if (step > 1) setStep(prevStep(step));
   };
 
   const finishOnboarding = async (wantsNotifications: boolean) => {
@@ -229,6 +303,9 @@ export default function OnboardingScreen() {
   };
 
   const pathItems = getPersonalizedPath(reason, stressResponse);
+  const visibleSteps = Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).filter((s) => !skippedSteps.has(s));
+  const currentIndex = visibleSteps.indexOf(step);
+  const progressPct = visibleSteps.length > 1 ? (currentIndex / (visibleSteps.length - 1)) * 100 : 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }}>
@@ -241,7 +318,7 @@ export default function OnboardingScreen() {
                 height: 4,
                 borderRadius: 2,
                 backgroundColor: c.brand.purple,
-                width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
+                width: `${progressPct}%`,
               }}
             />
           </View>

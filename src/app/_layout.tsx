@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Sentry from "@sentry/react-native";
+import * as Linking from "expo-linking";
 import { AppState, Platform, View, ActivityIndicator, Text } from "react-native";
 import { useAuthStore } from "@/store/auth";
 import { useSubscriptionStore } from "@/store/subscription";
@@ -108,11 +109,31 @@ function RootLayout() {
         case "goal_deadline":
           router.push("/(tabs)/growth");
           break;
+        case "weekly_summary":
+        case "journal_prompt":
+          router.push("/(tabs)/journal");
+          break;
         default:
           router.push("/(tabs)/chat");
       }
     });
     return () => sub?.remove?.();
+  }, [router]);
+
+  // Handle deep links — route lumis://life-blueprint pre-auth
+  useEffect(() => {
+    const handleUrl = ({ url }: { url: string }) => {
+      if (url.includes("life-blueprint")) {
+        router.push("/life-blueprint");
+      }
+    };
+    const sub = Linking.addEventListener("url", handleUrl);
+    Linking.getInitialURL().then((url) => {
+      if (url?.includes("life-blueprint")) {
+        router.push("/life-blueprint");
+      }
+    });
+    return () => sub.remove();
   }, [router]);
 
   if (isLoading) {
@@ -170,6 +191,7 @@ function RootLayout() {
         <Stack.Screen name="life-wheel" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="human-score" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="human-score-share" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="life-blueprint" options={{ animation: "slide_from_bottom", presentation: "fullScreenModal", gestureEnabled: true }} />
         <Stack.Screen name="habits" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom", presentation: "fullScreenModal" }} />
         <Stack.Screen name="privacy" options={{ animation: "slide_from_right" }} />

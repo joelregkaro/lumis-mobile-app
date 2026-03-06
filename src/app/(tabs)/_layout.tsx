@@ -14,6 +14,7 @@ const c = colors.dark;
 const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; default: keyof typeof Ionicons.glyphMap }> = {
   home: { focused: "today", default: "today-outline" },
   chat: { focused: "chatbubble-ellipses", default: "chatbubble-ellipses-outline" },
+  journal: { focused: "book", default: "book-outline" },
   growth: { focused: "leaf", default: "leaf-outline" },
   me: { focused: "person", default: "person-outline" },
 };
@@ -21,6 +22,7 @@ const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; defau
 const TAB_LABELS: Record<string, string> = {
   home: "Today",
   chat: "Chat",
+  journal: "Journal",
   growth: "Growth",
   me: "Me",
 };
@@ -77,6 +79,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="chat" />
+      <Tabs.Screen name="journal" />
       <Tabs.Screen name="growth" />
       <Tabs.Screen name="me" />
     </Tabs>

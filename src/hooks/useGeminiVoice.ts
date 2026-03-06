@@ -99,18 +99,21 @@ export function useGeminiVoice({
     [onTranscript],
   );
 
+  const audioSessionConfiguredRef = useRef(false);
+
   // Create AudioContext and BufferQueueSource
   const ensureAudioPipeline = useCallback(async () => {
     if (!AudioContext) return false;
 
-    // Configure iOS audio session for simultaneous mic + speaker playback
-    if (AudioManager && Platform.OS === "ios") {
+    // Configure iOS audio session ONCE per connection
+    if (AudioManager && Platform.OS === "ios" && !audioSessionConfiguredRef.current) {
       try {
         AudioManager.setAudioSessionOptions({
           iosCategory: "playAndRecord",
           iosMode: "voiceChat",
           iosOptions: ["defaultToSpeaker", "allowBluetoothA2DP"],
         });
+        audioSessionConfiguredRef.current = true;
         console.log("[GeminiVoice] Audio session configured: playAndRecord + defaultToSpeaker");
       } catch (e: any) {
         console.warn("[GeminiVoice] Audio session config failed:", e?.message);
@@ -506,10 +509,11 @@ export function useGeminiVoice({
       wsRef.current = null;
     }
 
+    // Native calls can hang — wrap each with a hard timeout
     try {
       await Promise.race([
         stopRecording(),
-        new Promise((resolve) => setTimeout(resolve, 2000)),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
       ]);
     } catch {}
 
@@ -522,13 +526,19 @@ export function useGeminiVoice({
     }
 
     if (audioContextRef.current) {
-      try { await audioContextRef.current.close(); } catch {}
+      try {
+        await Promise.race([
+          audioContextRef.current.close(),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      } catch {}
       audioContextRef.current = null;
     }
 
     pendingPcmRef.current = [];
     pendingSizeRef.current = 0;
     isSourceStartedRef.current = false;
+    audioSessionConfiguredRef.current = false;
     setIsConnected(false);
     setIsSpeaking(false);
     updateStatus("idle");
@@ -541,13 +551,22 @@ export function useGeminiVoice({
 
   useEffect(() => {
     return () => {
+      intentionalCloseRef.current = true;
       if (keepAliveRef.current) clearInterval(keepAliveRef.current);
-      if (wsRef.current) wsRef.current.close();
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
+        wsRef.current.onmessage = null;
+        try { wsRef.current.close(); } catch {}
+      }
       if (audioSourceRef.current) {
         try { audioSourceRef.current.stop(); audioSourceRef.current.disconnect(); } catch {}
       }
+      // Don't await audioContext.close() in cleanup — it can hang and block unmount
       if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch {}
+        const ctx = audioContextRef.current;
+        audioContextRef.current = null;
+        try { ctx.close(); } catch {}
       }
     };
   }, []);

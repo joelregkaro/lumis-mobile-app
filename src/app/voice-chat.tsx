@@ -27,6 +27,7 @@ import { useVoiceChatStore } from "@/store/voiceChat";
 import { useGeminiVoice } from "@/hooks/useGeminiVoice";
 import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { useStreakStore } from "@/store/streak";
+import { supabase } from "@/lib/supabase";
 import type { VoiceTranscriptMessage } from "@/store/voiceChat";
 
 function formatTime(seconds: number): string {
@@ -51,7 +52,6 @@ export default function VoiceChatScreen() {
     isMuted: storeMuted,
     error,
     startSession,
-    endSession,
     addTranscript,
     updateLastTranscript,
     setStatus,
@@ -93,6 +93,7 @@ export default function VoiceChatScreen() {
 
   // Status text
   const statusText = (() => {
+    if (isEnding) return "Saving session...";
     if (storeStatus === "connecting") return "Connecting...";
     if (storeStatus === "error") return error ?? "Connection error";
     if (isSpeaking) return `${companionName} is speaking...`;
@@ -176,35 +177,74 @@ export default function VoiceChatScreen() {
   }, [storeMuted, setStoreMuted, setVoiceMuted]);
 
   const handleEndSession = useCallback(async () => {
+    console.log("[VoiceChat] handleEndSession called, isEnding:", isEnding);
     if (isEnding) return;
     setIsEnding(true);
-    hapticMedium();
+
+    try { hapticMedium(); } catch {}
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    // Disconnect audio/WebSocket immediately (should be fast)
-    try {
-      await Promise.race([
-        disconnect(),
-        new Promise((resolve) => setTimeout(resolve, 2000)),
-      ]);
-    } catch {}
+    // Snapshot transcript data from store BEFORE any cleanup
+    const { sessionId: sid, transcriptMessages: msgs, _accessToken: token } =
+      useVoiceChatStore.getState();
 
-    // Navigate away FIRST so the user isn't stuck staring at the screen
-    if (router.canGoBack()) {
-      router.back();
-    } else {
+    // Navigate away immediately
+    console.log("[VoiceChat] Navigating away");
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/");
+      }
+    } catch {
       router.replace("/");
     }
 
-    // Fire-and-forget: save session + update streak in background
-    endSession().catch(() => {});
+    // Save transcript in background using snapshotted data (not dependent on store/component)
+    (async () => {
+      try {
+        if (sid && msgs.length > 0) {
+          const transcript = msgs.map((m) => ({ role: m.role, content: m.content }));
+          let authToken = token;
+          if (!authToken) {
+            const { data } = await supabase.auth.refreshSession();
+            authToken = data.session?.access_token ?? null;
+          }
+          if (authToken) {
+            const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/voice-session-end`;
+            let res = await fetch(url, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ session_id: sid, transcript }),
+            });
+            if (res.status === 401) {
+              const { data } = await supabase.auth.refreshSession();
+              const fresh = data.session?.access_token;
+              if (fresh) {
+                res = await fetch(url, {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${fresh}`, "Content-Type": "application/json" },
+                  body: JSON.stringify({ session_id: sid, transcript }),
+                });
+              }
+            }
+            console.log("[VoiceChat] Background save:", res.ok ? "success" : res.status);
+          }
+        }
+      } catch (e) {
+        console.error("[VoiceChat] Background save error:", e);
+      }
+    })();
+
+    // Disconnect audio/WS and update streak in background
+    disconnect().catch(() => {});
     useStreakStore.getState().updateStreak();
-    setIsEnding(false);
-  }, [isEnding, disconnect, endSession, router]);
+    useVoiceChatStore.getState().reset();
+  }, [isEnding, disconnect, router]);
 
   const confirmEndSession = useCallback(() => {
     hapticLight();

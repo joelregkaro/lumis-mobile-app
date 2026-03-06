@@ -23,6 +23,7 @@ interface VoiceChatState {
   elapsed: number;
   isMuted: boolean;
   error: string | null;
+  _accessToken: string | null;
 
   startSession: () => Promise<{ token: string; sessionId: string; systemPrompt: string }>;
   endSession: () => Promise<void>;
@@ -43,6 +44,7 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
   elapsed: 0,
   isMuted: false,
   error: null,
+  _accessToken: null,
 
   startSession: async () => {
     set({ status: "connecting", error: null });
@@ -83,37 +85,64 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
       transcriptMessages: [],
       elapsed: 0,
       status: "connecting",
+      _accessToken: session.access_token,
     });
 
     return { token: data.token, sessionId: data.sessionId, systemPrompt: data.systemPrompt ?? "" };
   },
 
   endSession: async () => {
-    const { sessionId, transcriptMessages } = get();
+    const { sessionId, transcriptMessages, _accessToken } = get();
     if (!sessionId) return;
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
 
     const transcript = transcriptMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
+    // Try stored token first, then refresh if needed
+    let token = _accessToken;
+    if (!token) {
+      const { data } = await supabase.auth.refreshSession();
+      token = data.session?.access_token ?? null;
+    }
+    if (!token) {
+      console.error("[VoiceStore] No auth token available, cannot save session");
+      return;
+    }
+
     const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/voice-session-end`;
     try {
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ session_id: sessionId, transcript }),
       });
+
+      // If 401, try refreshing the token once
+      if (res.status === 401) {
+        console.log("[VoiceStore] Token expired, refreshing...");
+        const { data } = await supabase.auth.refreshSession();
+        const freshToken = data.session?.access_token;
+        if (freshToken) {
+          res = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${freshToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ session_id: sessionId, transcript }),
+          });
+        }
+      }
+
       if (!res.ok) {
         console.error("[VoiceStore] Failed to save session:", res.status);
+      } else {
+        console.log("[VoiceStore] Session saved successfully, messages:", transcript.length);
       }
     } catch (e) {
       console.error("[VoiceStore] Failed to save session:", e);
@@ -126,6 +155,7 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
       elapsed: 0,
       isMuted: false,
       error: null,
+      _accessToken: null,
     });
   },
 
@@ -169,5 +199,6 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
       elapsed: 0,
       isMuted: false,
       error: null,
+      _accessToken: null,
     }),
 }));

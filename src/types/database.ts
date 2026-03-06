@@ -28,6 +28,13 @@ export interface UserPreferences {
   assessment_results?: Record<string, string>;
 }
 
+export interface SessionInsight {
+  depth_score: number;
+  openness_score: number;
+  breakthrough: string | null;
+  themes: string[];
+}
+
 export interface Session {
   id: string;
   user_id: string;
@@ -43,7 +50,30 @@ export interface Session {
   techniques_used: string[];
   crisis_flag: boolean;
   token_count: number | null;
+  session_insight: SessionInsight | null;
   created_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  type: "chat" | "voice" | "journal";
+  session_number: number;
+  summary: string | null;
+  key_themes: string[];
+  mood_before: number | null;
+  mood_after: number | null;
+  mood_shift: number | null;
+  insight: { depth_score: number; breakthrough: string | null } | null;
+  echoes: { action_item: string; status: string }[];
+  duration_minutes: number | null;
+  crisis_flag: boolean;
+}
+
+export interface JournalSearchResult {
+  chunk_text: string;
+  session_id: string;
+  combined_score: number;
 }
 
 export interface Message {

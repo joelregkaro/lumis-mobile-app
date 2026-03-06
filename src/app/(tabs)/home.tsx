@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getEvolutionTier } from "@/components/companion/CompanionAvatar";
 import EchoCard from "@/components/echo/EchoCard";
 import AddHabitModal from "@/components/habits/AddHabitModal";
@@ -119,6 +120,23 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [celebrationText, setCelebrationText] = useState<string | null>(null);
   const [showLapsePrompt, setShowLapsePrompt] = useState<{ habitId: string; title: string; prevStreak: number } | null>(null);
+  const [showBlueprintNudge, setShowBlueprintNudge] = useState(false);
+
+  // Check if user completed blueprint but hasn't dismissed the share nudge
+  useEffect(() => {
+    (async () => {
+      try {
+        const bpRaw = await AsyncStorage.getItem("lumis_blueprint_data");
+        const dismissed = await AsyncStorage.getItem("lumis_blueprint_nudge_dismissed");
+        if (bpRaw && !dismissed) setShowBlueprintNudge(true);
+      } catch {}
+    })();
+  }, []);
+
+  const dismissBlueprintNudge = useCallback(async () => {
+    setShowBlueprintNudge(false);
+    await AsyncStorage.setItem("lumis_blueprint_nudge_dismissed", "true");
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -290,6 +308,42 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 12, color: c.text.tertiary }}>Dismiss</Text>
               </Pressable>
             </View>
+          </Animated.View>
+        )}
+
+        {/* Blueprint share nudge */}
+        {showBlueprintNudge && (
+          <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ marginBottom: 16 }}>
+            <LinearGradient
+              colors={[`${c.brand.purple}15`, `${c.brand.teal}10`]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 16, padding: 16, borderWidth: 1, borderColor: `${c.brand.purple}30` }}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: c.text.primary, marginBottom: 4 }}>
+                    Your Blueprint is ready
+                  </Text>
+                  <Text style={{ fontSize: 13, color: c.text.secondary, lineHeight: 18 }}>
+                    Share your Life Blueprint with friends and see how they compare.
+                  </Text>
+                </View>
+                <Pressable onPress={dismissBlueprintNudge} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={18} color={c.text.tertiary} />
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <Pressable
+                  onPress={() => { router.push("/life-blueprint"); }}
+                  style={{ flex: 1, backgroundColor: c.brand.purple, borderRadius: 10, paddingVertical: 10, alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "white" }}>View & Share</Text>
+                </Pressable>
+                <Pressable onPress={dismissBlueprintNudge} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: c.bg.surface }}>
+                  <Text style={{ fontSize: 13, fontWeight: "500", color: c.text.tertiary }}>Later</Text>
+                </Pressable>
+              </View>
+            </LinearGradient>
           </Animated.View>
         )}
 
