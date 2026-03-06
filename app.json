@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Lumis",
+    "name": "Lumis - AI Lifecoach",
     "slug": "lumis",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lumis.app",
+      "bundleIdentifier": "com.lumis.ios",
+      "buildNumber": "1",
       "entitlements": {
-        "com.apple.security.application-groups": ["group.com.lumis.app"]
+        "com.apple.security.application-groups": [
+          "group.com.lumis.ios",
+          "group.com.lumis.ios"
+        ]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,7 +34,13 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.lumis.app",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -53,6 +66,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "540f34c2-266f-4c15-8500-5d02b12d97f7"
+      }
     }
   }
 }

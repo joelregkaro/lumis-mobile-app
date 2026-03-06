@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform, NativeModules } from "react-native";
 
 const WIDGET_DATA_KEY = "widget_data";
-const APP_GROUP_ID = "group.com.lumis.app";
+const APP_GROUP_ID = "group.com.lumis.ios";
 
 interface WidgetData {
   streak: number;

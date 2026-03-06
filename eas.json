@@ -1,0 +1,41 @@
+{
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "ios": {
+        "distribution": "internal"
+      }
+    },
+    "production": {
+      "node": "20.19.4",
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
+      "ios": {
+        "distribution": "store",
+        "autoIncrement": false
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6760179474"
+      }
+    }
+  }
+}
