@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useLifeDomainsStore, DOMAIN_META, ALL_DOMAINS } from "@/store/lifeDomains";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen, track } from "@/lib/analytics";
 import type { LifeDomainType } from "@/types/database";
 
 export default function LifeWheelScreen() {
@@ -16,6 +17,8 @@ export default function LifeWheelScreen() {
     Object.fromEntries(ALL_DOMAINS.map((d) => [d, 5])) as Record<LifeDomainType, number>,
   );
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { screen("life_wheel"); }, []);
 
   useEffect(() => {
     fetchLatestScores();
@@ -34,6 +37,7 @@ export default function LifeWheelScreen() {
   const handleSave = async () => {
     setSaving(true);
     await saveAssessment(ALL_DOMAINS.map((d) => ({ domain: d, score: scores[d] })));
+    track("life_wheel_completed");
     await hapticSuccess();
     setSaving(false);
     setEditing(false);

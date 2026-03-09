@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 
 interface ReferralSent {
   status: "pending" | "activated" | "rewarded";
@@ -47,6 +48,7 @@ export const useReferralStore = create<ReferralState>((set) => ({
       if (error || data?.error) {
         return { success: false, error: data?.error || "Failed to apply code" };
       }
+      track("referral_applied");
       return { success: true };
     } catch {
       return { success: false, error: "Network error" };

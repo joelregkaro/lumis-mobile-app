@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 
 const isNative = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -33,7 +34,12 @@ export async function registerPushToken(): Promise<string | null> {
     finalStatus = status;
   }
 
-  if (finalStatus !== "granted") return null;
+  if (finalStatus !== "granted") {
+    track("push_permission_denied");
+    return null;
+  }
+
+  track("push_permission_granted");
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {

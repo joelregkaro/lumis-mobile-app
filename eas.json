@@ -24,7 +24,12 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hpykboppsvyendztzwch.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhweWtib3Bwc3Z5ZW5kenR6d2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MjczOTUsImV4cCI6MjA4ODEwMzM5NX0.P0ScsRf6N0Kx4KmgvkVid9hEaQsi0UVEDO9NfLoGCbk"
+      }
     }
   }
 }

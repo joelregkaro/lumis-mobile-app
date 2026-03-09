@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
+import { syncDailyProgressFromStores } from "@/lib/liveActivity";
 import type { DailyCheckin } from "@/types/database";
 
 function todayDateStr(): string {
@@ -76,7 +78,11 @@ export const useDailyCheckinStore = create<DailyCheckinState>((set) => ({
       .select()
       .single();
 
-    if (data) set({ todaysCheckin: data as DailyCheckin });
+    if (data) {
+      track("morning_intention_set", { domain });
+      set({ todaysCheckin: data as DailyCheckin });
+      syncDailyProgressFromStores();
+    }
   },
 
   setEveningReflection: async (reflection, completed, wins, rating) => {
@@ -102,6 +108,10 @@ export const useDailyCheckinStore = create<DailyCheckinState>((set) => ({
       .select()
       .single();
 
-    if (data) set({ todaysCheckin: data as DailyCheckin });
+    if (data) {
+      track("evening_reflection_completed", { rating });
+      set({ todaysCheckin: data as DailyCheckin });
+      syncDailyProgressFromStores();
+    }
   },
 }));

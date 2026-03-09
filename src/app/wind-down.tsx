@@ -16,6 +16,7 @@ import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useMoodStore } from "@/store/mood";
 import { useAuthStore } from "@/store/auth";
 import { hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 
 type WindDownMode = "reflection" | "gratitude" | "breathing" | "conversation";
 
@@ -104,6 +105,8 @@ export default function WindDownScreen() {
   const profile = useAuthStore((s) => s.profile);
   const logMood = useMoodStore((s) => s.logMood);
   const [mode, setMode] = useState<WindDownMode | null>(null);
+
+  useEffect(() => { screen("wind_down"); }, []);
   const [gratitude, setGratitude] = useState(["", "", ""]);
   const [reflectionText, setReflectionText] = useState("");
   const [saved, setSaved] = useState(false);

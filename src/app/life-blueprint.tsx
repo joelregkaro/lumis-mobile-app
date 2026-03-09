@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView,
   ActivityIndicator, Alert,
@@ -21,7 +21,7 @@ import type { BlueprintResult } from "@/components/blueprint/BlueprintResultCard
 import { supabase } from "@/lib/supabase";
 import { hapticLight, hapticMedium, hapticSuccess } from "@/lib/haptics";
 import { useAuthStore } from "@/store/auth";
-import { track } from "@/lib/analytics";
+import { track, screen } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
 
 const c = colors.dark;
@@ -125,6 +125,8 @@ type Phase = "quiz" | "loading" | "result";
 export default function LifeBlueprintScreen() {
   const router = useRouter();
   const { session } = useAuthStore();
+  useEffect(() => { screen("life_blueprint"); }, []);
+
   const [phase, setPhase] = useState<Phase>("quiz");
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});

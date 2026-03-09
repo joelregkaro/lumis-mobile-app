@@ -25,6 +25,7 @@ import { useEchoStore } from "@/store/echo";
 import { useGoalStore } from "@/store/goals";
 import { supabase } from "@/lib/supabase";
 import { hapticLight } from "@/lib/haptics";
+import { screen, track } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
 import type { ChatMessage } from "@/types/chat";
 
@@ -170,6 +171,7 @@ export default function ChatScreen() {
     async (starter: string) => {
       if (isStreaming) return;
       await hapticLight();
+      track("starter_tapped", { text: starter });
       try {
         await sendMessage(starter, journalOpts);
       } catch {
@@ -223,7 +225,10 @@ export default function ChatScreen() {
           </View>
         </View>
         <Pressable
-          onPress={() => router.push("/sos")}
+          onPress={() => {
+            track("sos_opened", { source: "chat" });
+            router.push("/sos");
+          }}
           style={{
             width: 36,
             height: 36,

@@ -15,6 +15,7 @@ import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useHabitStore } from "@/store/habits";
 import AddHabitModal from "@/components/habits/AddHabitModal";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import type { Habit, HabitPhase, HabitDifficulty } from "@/types/database";
 
 const PHASE_CONFIG: Record<HabitPhase, { label: string; color: string; description: string }> = {
@@ -135,6 +136,8 @@ export default function HabitsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [historyMap, setHistoryMap] = useState<Record<string, string[]>>({});
   const [upgradeMap, setUpgradeMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => { screen("habits"); }, []);
 
   const loadData = useCallback(async () => {
     await Promise.all([fetchHabits(), fetchTodayCompletions()]);

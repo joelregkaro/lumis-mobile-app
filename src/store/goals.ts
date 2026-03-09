@@ -110,7 +110,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
         ? s.goals.filter((g) => g.id !== id)
         : s.goals.map((g) => (g.id === id ? { ...g, status } : g)),
     }));
-    if (status === "completed") track("goal_completed");
+    if (status === "completed") track("goal_completed", { goal_id: id });
   },
 
   addProgressNote: async (id, note, progressPct) => {

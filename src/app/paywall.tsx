@@ -8,6 +8,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useSubscriptionStore } from "@/store/subscription";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 
 const FEATURES = [
   { icon: "chatbubble-outline" as const, text: "Unlimited sessions" },
@@ -24,6 +25,7 @@ export default function PaywallScreen() {
   const [plan, setPlan] = useState<"annual" | "monthly">("annual");
 
   const dismiss = useCallback(() => {
+    track("paywall_dismissed");
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -37,6 +39,7 @@ export default function PaywallScreen() {
       dismiss();
       return;
     }
+    track("paywall_viewed");
     fetchOfferings();
   }, [isPro]);
 

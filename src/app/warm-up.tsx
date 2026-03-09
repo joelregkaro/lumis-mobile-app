@@ -8,6 +8,7 @@ import { useMemoryStore } from "@/store/memory";
 import { useEchoStore } from "@/store/echo";
 import { useMoodStore } from "@/store/mood";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 
 const MOOD_OPTIONS = [
   { score: 2, emoji: "😔", label: "Low" },
@@ -31,6 +32,8 @@ export default function WarmUpScreen() {
   const [topicText, setTopicText] = useState("");
 
   const companionName = profile?.companion_name ?? "Lumis";
+
+  useEffect(() => { screen("warm_up"); }, []);
 
   useEffect(() => {
     fetchMemoryDoc();

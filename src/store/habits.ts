@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
+import { syncDailyProgressFromStores } from "@/lib/liveActivity";
 import type {
   Habit,
   HabitCompletion,
@@ -186,6 +188,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
 
     const habit = data as Habit;
     set((s) => ({ habits: [...s.habits, habit] }));
+    track("habit_created", { title: params.title, frequency: params.frequency });
     return habit;
   },
 
@@ -231,6 +234,8 @@ export const useHabitStore = create<HabitState>((set, get) => ({
 
     const completion = data as HabitCompletion;
     set((s) => ({ todayCompletions: [...s.todayCompletions, completion] }));
+    track("habit_completed", { habit_id: habitId });
+    syncDailyProgressFromStores();
 
     const { data: streakData } = await supabase.rpc("update_habit_streak", {
       p_habit_id: habitId,
@@ -263,6 +268,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     } = await supabase.auth.getUser();
     if (!user) return;
 
+    track("habit_uncompleted", { habit_id: habitId });
     const today = todayStr();
     await supabase
       .from("habit_completions")
@@ -275,6 +281,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
         (c) => !(c.habit_id === habitId && c.completed_date === today),
       ),
     }));
+    syncDailyProgressFromStores();
 
     const { data: streakData } = await supabase.rpc("update_habit_streak", {
       p_habit_id: habitId,

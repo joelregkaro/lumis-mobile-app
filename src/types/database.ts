@@ -14,6 +14,13 @@ export interface User {
   streak_freezes_remaining: number;
   referral_code_used: string | null;
   future_self_vision: string | null;
+  onboarding_reason: string | null;
+  onboarding_archetype: string | null;
+  onboarding_dimensions: Record<string, number> | null;
+  onboarding_superpower: string | null;
+  onboarding_blind_spot: string | null;
+  onboarding_commitment_text: string | null;
+  guest_mode: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -230,6 +237,10 @@ export interface Relationship {
   notes: string | null;
   sentiment_trend: number | null;
   mentioned_count: number;
+  emotional_impact: string | null;
+  topics: string[] | null;
+  mood_correlation: number | null;
+  last_mentioned_at: string | null;
   first_mentioned_at: string;
   updated_at: string;
 }

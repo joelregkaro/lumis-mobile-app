@@ -20,7 +20,9 @@ import * as Sharing from "expo-sharing";
 import { supabase } from "@/lib/supabase";
 import { useMemoryStore } from "@/store/memory";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
+import ShareFooter from "@/components/share/ShareFooter";
 import type { InsightCard } from "@/types/database";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -185,13 +187,11 @@ function StoryCard({
         </Animated.View>
 
         {/* Watermark */}
-        <View style={{ position: "absolute", bottom: 40, alignItems: "center" }}>
-          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: "600", letterSpacing: 2 }}>
+        <View style={{ position: "absolute", bottom: 24, left: 32, right: 32, alignItems: "center" }}>
+          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: "600", letterSpacing: 2, marginBottom: 4 }}>
             {companionName} · {monthLabel}
           </Text>
-          <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: "500", marginTop: 2 }}>
-            lumis.app
-          </Text>
+          <ShareFooter variant="light" />
         </View>
       </LinearGradient>
     </ViewShot>
@@ -208,6 +208,8 @@ export default function WrappedScreen() {
   const [sharing, setSharing] = useState(false);
   const viewRefs = useRef<(ViewShot | null)[]>([]);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { screen("wrapped"); }, []);
 
   useEffect(() => {
     loadCards();

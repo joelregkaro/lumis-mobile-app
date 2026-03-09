@@ -25,6 +25,11 @@ import { useDailyCheckinStore } from "@/store/dailyCheckin";
 import { useHabitStore } from "@/store/habits";
 import { useHumanScoreStore, getTier } from "@/store/humanScore";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
+import {
+  startDailyProgressActivity,
+  restoreExistingActivities,
+} from "@/lib/liveActivity";
 import { useMilestoneStore } from "@/store/milestones";
 import { colors } from "@/constants/theme";
 import type { Habit } from "@/types/database";
@@ -107,7 +112,7 @@ export default function HomeScreen() {
   const todaysMood = useMoodStore((s) => s.todaysMood);
   const fetchTodaysMood = useMoodStore((s) => s.fetchTodaysMood);
   const { pendingEchoes, fetchPendingEchoes, markCompleted, markSkipped } = useEchoStore();
-  const { latestInsight, fetchLatestInsight, weeklyInsightCards, fetchWeeklyInsightCards } = useMemoryStore();
+  const { latestInsight, fetchLatestInsight, weeklyInsightCards, fetchWeeklyInsightCards, latestSessionRecap, fetchLatestSessionRecap, dismissSessionRecap } = useMemoryStore();
   const { goals, fetchGoals } = useGoalStore();
   const recentMoods = useMoodStore((s) => s.recentMoods);
   const fetchRecentMoods = useMoodStore((s) => s.fetchRecentMoods);
@@ -122,7 +127,8 @@ export default function HomeScreen() {
   const [showLapsePrompt, setShowLapsePrompt] = useState<{ habitId: string; title: string; prevStreak: number } | null>(null);
   const [showBlueprintNudge, setShowBlueprintNudge] = useState(false);
 
-  // Check if user completed blueprint but hasn't dismissed the share nudge
+  useEffect(() => { screen("home"); }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -145,6 +151,7 @@ export default function HomeScreen() {
         fetchGoals(), fetchRecentMoods(14), fetchStreak(),
         fetchWeeklyInsightCards(), fetchDailyCheckin(), fetchWeekHistory(),
         fetchHabits(), fetchTodayCompletions(), fetchLatestScore(),
+        fetchLatestSessionRecap(),
       ]);
     } catch (e) {
       console.warn("Failed to load some home data:", e);
@@ -153,7 +160,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); restoreExistingActivities(); }, []);
   useEffect(() => { if (todaysMood) setMoodLogged(true); }, [todaysMood]);
 
   const onRefresh = useCallback(async () => {
@@ -181,6 +188,21 @@ export default function HomeScreen() {
     return "warm" as const;
   }, [moodTrend, latestInsight]);
   const companionTier = useMemo(() => getEvolutionTier(currentStreak), [currentStreak]);
+
+  useEffect(() => {
+    if (loading) return;
+    const habits = todaysHabits();
+    const completedCount = habits.filter((h) => isCompletedToday(h.id)).length;
+    startDailyProgressActivity({
+      completedHabits: completedCount,
+      totalHabits: habits.length,
+      currentStreak,
+      morningIntentionDone: !!todaysCheckin?.morning_intention,
+      moodLoggedToday: !!todaysMood,
+      eveningReflectionDone: !!todaysCheckin?.evening_reflection,
+      companionName,
+    });
+  }, [loading, todayCompletions, currentStreak, todaysCheckin, todaysMood, companionName]);
 
   const showCelebration = (text: string) => {
     setCelebrationText(text);
@@ -366,6 +388,65 @@ export default function HomeScreen() {
           onAddHabit={() => setShowAddHabit(true)}
           onViewAllHabits={() => router.push("/habits")}
         />
+
+        {/* Session Recap Card */}
+        {latestSessionRecap?.data && (
+          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ marginBottom: 24 }}>
+            <View style={{
+              backgroundColor: "#16161D",
+              borderRadius: 16,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: "#8B5CF630",
+            }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Ionicons name="sparkles" size={16} color="#A78BFA" style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#F4F4F5" }}>Session Recap</Text>
+                </View>
+                <Pressable onPress={() => dismissSessionRecap(latestSessionRecap.id)} hitSlop={12}>
+                  <Ionicons name="close" size={18} color="#71717A" />
+                </Pressable>
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#E4E4E7", marginBottom: 10 }}>
+                {latestSessionRecap.data.headline}
+              </Text>
+              {latestSessionRecap.data.key_takeaways?.length > 0 && (
+                <View style={{ marginBottom: 10 }}>
+                  {latestSessionRecap.data.key_takeaways.map((t: string, i: number) => (
+                    <Text key={i} style={{ fontSize: 13, color: "#A1A1AA", lineHeight: 19, marginBottom: 4 }}>
+                      {"\u2022"} {t}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {latestSessionRecap.data.wins?.length > 0 && (
+                <View style={{ backgroundColor: "#065F4610", borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                  {latestSessionRecap.data.wins.map((w: string, i: number) => (
+                    <Text key={i} style={{ fontSize: 13, color: "#34D399", lineHeight: 18 }}>
+                      {"\u2728"} {w}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {latestSessionRecap.data.next_steps?.length > 0 && (
+                <View style={{ marginBottom: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#71717A", marginBottom: 4 }}>NEXT STEPS</Text>
+                  {latestSessionRecap.data.next_steps.map((s: string, i: number) => (
+                    <Text key={i} style={{ fontSize: 13, color: "#D4D4D8", lineHeight: 18, marginBottom: 2 }}>
+                      {"\u2192"} {s}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {latestSessionRecap.data.closing_thought && (
+                <Text style={{ fontSize: 13, color: "#8B5CF6", fontStyle: "italic", lineHeight: 18, marginTop: 4 }}>
+                  "{latestSessionRecap.data.closing_thought}"
+                </Text>
+              )}
+            </View>
+          </Animated.View>
+        )}
 
         {/* Between Sessions (echoes) */}
         {pendingEchoes.length > 0 && (

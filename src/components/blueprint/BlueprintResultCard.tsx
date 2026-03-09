@@ -7,6 +7,7 @@ import * as Sharing from "expo-sharing";
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withTiming, withDelay } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { hapticSuccess } from "@/lib/haptics";
+import ShareFooter from "@/components/share/ShareFooter";
 
 const ATTR_META: Record<string, { label: string; color: string }> = {
   awareness: { label: "Awareness", color: "#A78BFA" },
@@ -158,9 +159,7 @@ export default function BlueprintResultCard({ result, onStartJourney, onRetake }
                 </View>
               </View>
 
-              <Text style={{ fontSize: 9, color: "#5A617840", marginTop: 16, letterSpacing: 3, fontWeight: "600" }}>
-                lumis.app
-              </Text>
+              <ShareFooter variant="dark" />
             </LinearGradient>
           </View>
         </ViewShot>

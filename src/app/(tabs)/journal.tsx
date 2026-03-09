@@ -19,6 +19,7 @@ import JournalEntryCard from "@/components/journal/JournalEntryCard";
 import SearchResultCard from "@/components/journal/SearchResultCard";
 import { EmptyState } from "@/components/ui";
 import { hapticLight } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
 import type { InsightCard } from "@/types/database";
 
@@ -103,6 +104,8 @@ export default function JournalScreen() {
     clearSearch,
   } = useJournalStore();
 
+  useEffect(() => { screen("journal"); }, []);
+
   useEffect(() => {
     loadTimeline();
   }, []);
@@ -133,6 +136,7 @@ export default function JournalScreen() {
 
   const startJournalMode = useCallback(() => {
     hapticLight();
+    track("journal_mode_started");
     router.push({
       pathname: "/(tabs)/chat",
       params: { journalMode: "true" },

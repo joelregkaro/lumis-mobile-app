@@ -177,7 +177,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return { messages: msgs, isStreaming: false };
       });
 
-      track("message_sent");
+      track("message_sent", { session_number: get().sessionNumber, message_length: content.length, session_id: get().currentSessionId ?? undefined });
     } catch (error) {
       set((state) => {
         const msgs = state.messages.filter((m) => m.id !== assistantPlaceholder.id);
@@ -192,6 +192,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (currentSessionId) {
       get().endSession().catch(() => {});
     }
+    track("chat_session_started", { session_number: get().sessionNumber + 1 });
     set({ messages: [], currentSessionId: null, isStreaming: false });
   },
 
@@ -280,7 +281,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       );
     } catch { /* fire-and-forget */ }
 
-    track("session_ended");
+    track("session_ended", { session_number: get().sessionNumber, message_count: get().messages.length, session_id: currentSessionId });
     set({ currentSessionId: null });
   },
 

@@ -13,6 +13,7 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 const Haptics = Platform.OS !== "web" ? require("expo-haptics") : null;
+import { screen } from "@/lib/analytics";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { SOS_CONFIGS, type SOSMode } from "@/types/chat";
 
@@ -250,6 +251,8 @@ function CrisisFooter() {
 export default function SOSScreen() {
   const router = useRouter();
   const [selectedMode, setSelectedMode] = useState<SOSMode | null>(null);
+
+  useEffect(() => { screen("sos"); }, []);
 
   const config = selectedMode ? SOS_CONFIGS[selectedMode] : null;
 

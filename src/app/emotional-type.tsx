@@ -7,6 +7,7 @@ import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTim
 import ShareableCard from "@/components/share/ShareableCard";
 import { supabase } from "@/lib/supabase";
 import { hapticLight } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 
 interface EmotionalType {
   type_name: string;
@@ -52,6 +53,8 @@ export default function EmotionalTypeScreen() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [typeData, setTypeData] = useState<EmotionalType | null>(null);
+
+  useEffect(() => { screen("emotional_type"); }, []);
 
   useEffect(() => {
     loadExisting();

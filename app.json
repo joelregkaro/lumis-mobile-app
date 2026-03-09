@@ -21,7 +21,8 @@
         ]
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSSupportsLiveActivities": true
       }
     },
     "android": {
@@ -60,7 +61,7 @@
           "organization": "lumis",
           "project": "lumis-app"
         }
-      ]
+      ],
     ],
     "experiments": {
       "typedRoutes": true

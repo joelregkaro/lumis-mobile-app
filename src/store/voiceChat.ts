@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 
 export interface VoiceTranscriptMessage {
   role: "user" | "assistant";
@@ -59,24 +60,57 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
 
     const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/voice-session-token`;
     console.log("[VoiceStore] Fetching token from:", url);
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error("[VoiceStore] Token fetch failed:", res.status, errBody);
-      set({ status: "error", error: errBody });
-      throw new Error(errBody);
+    const MAX_RETRIES = 2;
+    const TIMEOUT_MS = 15_000;
+    let data: any = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+
+        if (!res.ok) {
+          const errBody = await res.text();
+          console.error("[VoiceStore] Token fetch failed:", res.status, errBody);
+          set({ status: "error", error: errBody });
+          throw new Error(errBody);
+        }
+
+        data = await res.json();
+        console.log("[VoiceStore] Token received, sessionId:", data.sessionId);
+        break;
+      } catch (err: any) {
+        const isNetworkError = err?.name === "AbortError" || err?.message?.includes("Network request failed");
+        if (isNetworkError && attempt < MAX_RETRIES) {
+          const delay = (attempt + 1) * 1500;
+          console.warn(`[VoiceStore] Attempt ${attempt + 1} failed (${err?.message}), retrying in ${delay}ms...`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        const msg = err?.name === "AbortError"
+          ? "Connection timed out. Check your internet and try again."
+          : err?.message ?? "Failed to start session";
+        set({ status: "error", error: msg });
+        throw new Error(msg);
+      }
     }
 
-    const data = await res.json();
-    console.log("[VoiceStore] Token received, sessionId:", data.sessionId);
+    if (!data) {
+      set({ status: "error", error: "Failed to start session after retries" });
+      throw new Error("Failed to start session after retries");
+    }
 
     set({
       sessionId: data.sessionId,
@@ -88,6 +122,7 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
       _accessToken: session.access_token,
     });
 
+    track("voice_session_started", { session_number: data.sessionNumber, session_id: data.sessionId });
     return { token: data.token, sessionId: data.sessionId, systemPrompt: data.systemPrompt ?? "" };
   },
 
@@ -95,10 +130,16 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
     const { sessionId, transcriptMessages, _accessToken } = get();
     if (!sessionId) return;
 
-    const transcript = transcriptMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const merged: { role: string; content: string }[] = [];
+    for (const m of transcriptMessages) {
+      const last = merged[merged.length - 1];
+      if (last && last.role === m.role) {
+        last.content += " " + m.content;
+      } else {
+        merged.push({ role: m.role, content: m.content });
+      }
+    }
+    const transcript = merged;
 
     // Try stored token first, then refresh if needed
     let token = _accessToken;
@@ -148,6 +189,7 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
       console.error("[VoiceStore] Failed to save session:", e);
     }
 
+    track("voice_session_ended", { session_number: get().sessionNumber, duration_seconds: get().elapsed, message_count: transcriptMessages.length, session_id: sessionId });
     set({
       status: "idle",
       sessionId: null,
@@ -185,7 +227,10 @@ export const useVoiceChatStore = create<VoiceChatState>((set, get) => ({
 
   setStatus: (status) => set({ status }),
 
-  setMuted: (isMuted) => set({ isMuted }),
+  setMuted: (isMuted) => {
+    track("voice_mute_toggled", { muted: isMuted });
+    set({ isMuted });
+  },
 
   setElapsed: (elapsed) => set({ elapsed }),
 

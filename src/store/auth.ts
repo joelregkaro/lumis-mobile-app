@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { track, identify, reset as resetAnalytics } from "@/lib/analytics";
 import type { User as AppUser } from "@/types/database";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -85,6 +86,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) throw error;
     if (data.user) {
       set({ session: data.session, user: data.user });
+      identify(data.user.id);
+      track("sign_in", { method: "email" });
       await get().fetchProfile();
     }
   },
@@ -94,6 +97,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) throw error;
 
     if (data.user) {
+      identify(data.user.id);
+      track("sign_up", { method: "email" });
       const { error: profileError } = await supabase.from("users").upsert(
         {
           id: data.user.id,
@@ -138,6 +143,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       nonce,
     });
     if (error) throw error;
+    track("sign_in", { method: "apple" });
   },
 
   signInWithGoogle: async () => {
@@ -154,9 +160,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       },
     });
     if (error) throw error;
+    track("sign_in", { method: "google" });
   },
 
   signOut: async () => {
+    track("sign_out");
+    resetAnalytics();
     await supabase.auth.signOut();
     set({ session: null, user: null, profile: null, isOnboarded: false });
   },

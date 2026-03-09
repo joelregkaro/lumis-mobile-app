@@ -20,6 +20,7 @@ import { useStreakStore } from "@/store/streak";
 import { useHumanScoreStore, getTier } from "@/store/humanScore";
 import { supabase } from "@/lib/supabase";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import { colors } from "@/constants/theme";
 import type { Goal, InsightCard } from "@/types/database";
 
@@ -192,6 +193,8 @@ export default function GrowthScreen() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => { screen("growth"); }, []);
 
   const loadData = useCallback(async () => {
     await loadCelebrated();

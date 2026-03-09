@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 import type { SessionEcho } from "@/types/database";
 
 type CommitmentOutcome = "done" | "partially" | "not_done" | "rescheduled";
@@ -45,6 +46,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
       .from("session_echoes")
       .update({ status: "completed" })
       .eq("id", id);
+    track("echo_completed", { echo_id: id });
     set((s) => ({
       pendingEchoes: s.pendingEchoes.filter((e) => e.id !== id),
     }));
@@ -55,6 +57,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
       .from("session_echoes")
       .update({ status: "skipped" })
       .eq("id", id);
+    track("echo_skipped", { echo_id: id });
     set((s) => ({
       pendingEchoes: s.pendingEchoes.filter((e) => e.id !== id),
     }));

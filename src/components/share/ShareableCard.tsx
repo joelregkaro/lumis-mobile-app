@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { hapticSuccess } from "@/lib/haptics";
+import ShareFooter from "@/components/share/ShareFooter";
 
 const GRADIENTS: [string, string][] = [
   ["#7C3AED", "#2DD4BF"],
@@ -66,9 +67,9 @@ export default function ShareableCard({
           }}
         >
           {children}
-          <Text style={{ position: "absolute", bottom: 16, fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: "500" }}>
-            lumis.app
-          </Text>
+          <View style={{ position: "absolute", bottom: 12, left: 32, right: 32 }}>
+            <ShareFooter variant="light" />
+          </View>
         </LinearGradient>
       </ViewShot>
 

@@ -2,6 +2,16 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { UserMemory, Pattern, UserMemoryDoc, MemoryCategory, InsightCard } from "@/types/database";
 
+export interface SessionRecap {
+  headline: string;
+  key_takeaways: string[];
+  wins: string[];
+  next_steps: string[];
+  closing_thought: string;
+  session_id: string;
+  session_number: number;
+}
+
 interface MemoryState {
   memoryDoc: UserMemoryDoc | null;
   memories: UserMemory[];
@@ -9,6 +19,7 @@ interface MemoryState {
   latestInsight: Pattern | null;
   wrappedCards: InsightCard[];
   weeklyInsightCards: InsightCard[];
+  latestSessionRecap: (InsightCard & { data: SessionRecap }) | null;
   isLoading: boolean;
 
   fetchMemoryDoc: () => Promise<void>;
@@ -17,6 +28,8 @@ interface MemoryState {
   fetchLatestInsight: () => Promise<void>;
   fetchWrapped: () => Promise<void>;
   fetchWeeklyInsightCards: () => Promise<void>;
+  fetchLatestSessionRecap: () => Promise<void>;
+  dismissSessionRecap: (cardId: string) => void;
   markShared: (cardId: string) => Promise<void>;
   updateMemory: (id: string, content: string) => Promise<void>;
   deleteMemory: (id: string) => Promise<void>;
@@ -30,6 +43,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   latestInsight: null,
   wrappedCards: [],
   weeklyInsightCards: [],
+  latestSessionRecap: null,
   isLoading: false,
 
   fetchMemoryDoc: async () => {
@@ -129,6 +143,29 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       .limit(5);
 
     set({ weeklyInsightCards: (data as InsightCard[]) ?? [] });
+  },
+
+  fetchLatestSessionRecap: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const { data } = await supabase
+      .from("insight_cards")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("card_type", "session_recap")
+      .gte("created_at", oneDayAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    set({ latestSessionRecap: data?.[0] ? (data[0] as any) : null });
+  },
+
+  dismissSessionRecap: (cardId) => {
+    set({ latestSessionRecap: null });
   },
 
   markShared: async (cardId) => {

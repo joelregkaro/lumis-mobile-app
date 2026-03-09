@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -23,10 +23,14 @@ import Animated, {
   withDelay,
 } from "react-native-reanimated";
 import Svg, { Line, Circle as SvgCircle } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
+import ViewShot from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
-import ShareableCard from "@/components/share/ShareableCard";
+import ShareFooter from "@/components/share/ShareFooter";
 import { supabase } from "@/lib/supabase";
-import { hapticLight } from "@/lib/haptics";
+import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import type { Relationship } from "@/types/database";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -230,8 +234,46 @@ function ConnectionLines({
   );
 }
 
+function daysAgo(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function recencyLabel(d: number | null): string {
+  if (d === null) return "";
+  if (d === 0) return "Today";
+  if (d === 1) return "Yesterday";
+  if (d <= 7) return `${d}d ago`;
+  if (d <= 30) return `${Math.ceil(d / 7)}w ago`;
+  return `${Math.floor(d / 30)}mo ago`;
+}
+
+function impactIcon(impact: string | null): string {
+  switch (impact) {
+    case "energizing": return "sunny-outline";
+    case "draining": return "battery-dead-outline";
+    case "complicated": return "git-branch-outline";
+    case "supportive": return "heart-outline";
+    default: return "remove-outline";
+  }
+}
+
+function impactColor(impact: string | null): string {
+  switch (impact) {
+    case "energizing": return "#FBBF24";
+    case "draining": return "#F87171";
+    case "complicated": return "#A78BFA";
+    case "supportive": return "#34D399";
+    default: return "#6B7280";
+  }
+}
+
 function DetailCard({ rel }: { rel: Relationship }) {
   const color = sentimentColor(rel.sentiment_trend);
+  const lastSeen = daysAgo(rel.last_mentioned_at);
+  const impact = rel.emotional_impact;
+  const topics = rel.topics ?? [];
+
   return (
     <Animated.View
       entering={FadeInUp.duration(300)}
@@ -244,13 +286,14 @@ function DetailCard({ rel }: { rel: Relationship }) {
         borderColor: `${color}30`,
       }}
     >
+      {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
         <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: `${color}20`,
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: `${color}15`,
             borderWidth: 2,
             borderColor: color,
             alignItems: "center",
@@ -266,43 +309,45 @@ function DetailCard({ rel }: { rel: Relationship }) {
           <Text style={{ fontSize: 18, fontWeight: "700", color: "#F4F4F5" }}>
             {rel.name}
           </Text>
-          {rel.relation_type && (
-            <Text style={{ fontSize: 13, color: "#71717A", marginTop: 2 }}>
-              {rel.relation_type}
-            </Text>
-          )}
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 3 }}>
+            {rel.relation_type && (
+              <Text style={{ fontSize: 13, color: "#71717A" }}>
+                {rel.relation_type}
+              </Text>
+            )}
+            {lastSeen !== null && (
+              <Text style={{ fontSize: 12, color: "#52525B", marginLeft: rel.relation_type ? 8 : 0 }}>
+                · {recencyLabel(lastSeen)}
+              </Text>
+            )}
+          </View>
         </View>
-        <Text style={{ fontSize: 22 }}>{sentimentEmoji(rel.sentiment_trend)}</Text>
+        <Text style={{ fontSize: 24 }}>{sentimentEmoji(rel.sentiment_trend)}</Text>
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
+      {/* Stats row */}
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
         <View
           style={{
             flex: 1,
             backgroundColor: "#1F2937",
-            borderRadius: 12,
+            borderRadius: 14,
             padding: 12,
             alignItems: "center",
           }}
         >
-          <Text style={{ fontSize: 24, fontWeight: "800", color: "#F4F4F5" }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: "#F4F4F5" }}>
             {rel.mentioned_count}
           </Text>
-          <Text style={{ fontSize: 11, color: "#71717A", marginTop: 2 }}>
-            mentions
+          <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 2, fontWeight: "600" }}>
+            MENTIONS
           </Text>
         </View>
         <View
           style={{
             flex: 1,
             backgroundColor: "#1F2937",
-            borderRadius: 12,
+            borderRadius: 14,
             padding: 12,
             alignItems: "center",
           }}
@@ -310,21 +355,61 @@ function DetailCard({ rel }: { rel: Relationship }) {
           <Text style={{ fontSize: 14, fontWeight: "700", color }}>
             {sentimentLabel(rel.sentiment_trend)}
           </Text>
-          <Text style={{ fontSize: 11, color: "#71717A", marginTop: 2 }}>
-            sentiment
+          <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 2, fontWeight: "600" }}>
+            SENTIMENT
           </Text>
         </View>
+        {impact && (
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "#1F2937",
+              borderRadius: 14,
+              padding: 12,
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name={impactIcon(impact) as any} size={20} color={impactColor(impact)} />
+            <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 4, fontWeight: "600", textTransform: "uppercase" }}>
+              {impact}
+            </Text>
+          </View>
+        )}
       </View>
 
+      {/* Topics */}
+      {topics.length > 0 && (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+          {topics.map((t) => (
+            <View
+              key={t}
+              style={{
+                backgroundColor: `${color}15`,
+                borderRadius: 20,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderWidth: 1,
+                borderColor: `${color}25`,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "600", color: `${color}CC` }}>
+                {t}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Context note */}
       {rel.notes && (
         <View
           style={{
             backgroundColor: "#1F2937",
-            borderRadius: 12,
+            borderRadius: 14,
             padding: 14,
           }}
         >
-          <Text style={{ fontSize: 11, color: "#71717A", marginBottom: 4, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <Text style={{ fontSize: 10, color: "#52525B", marginBottom: 4, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 }}>
             Latest context
           </Text>
           <Text style={{ fontSize: 14, color: "#D1D5DB", lineHeight: 20 }}>
@@ -366,6 +451,8 @@ export default function RelationshipsScreen() {
     setLoading(false);
   }, []);
 
+  useEffect(() => { screen("relationships"); }, []);
+
   useEffect(() => {
     loadRelationships();
   }, [loadRelationships]);
@@ -387,7 +474,7 @@ export default function RelationshipsScreen() {
   );
 
   const topMentioned = useMemo(
-    () => relationships[0]?.name ?? null,
+    () => relationships[0] ?? null,
     [relationships],
   );
 
@@ -396,10 +483,47 @@ export default function RelationshipsScreen() {
     [relationships],
   );
 
+  const strainedPeople = useMemo(
+    () => relationships.filter((r) => (r.sentiment_trend ?? 0) < -0.3).length,
+    [relationships],
+  );
+
   const totalMentions = useMemo(
     () => relationships.reduce((sum, r) => sum + r.mentioned_count, 0),
     [relationships],
   );
+
+  const relationTypes = useMemo(() => {
+    const types = new Set(relationships.map((r) => r.relation_type).filter(Boolean));
+    return types.size;
+  }, [relationships]);
+
+  const energizingPeople = useMemo(
+    () => relationships.filter((r) => r.emotional_impact === "energizing" || r.emotional_impact === "supportive").length,
+    [relationships],
+  );
+
+  const allTopics = useMemo(() => {
+    const topics = new Map<string, number>();
+    relationships.forEach((r) => {
+      (r.topics ?? []).forEach((t) => {
+        topics.set(t, (topics.get(t) ?? 0) + 1);
+      });
+    });
+    return [...topics.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [relationships]);
+
+  const worldInsight = useMemo(() => {
+    const total = relationships.length;
+    if (total === 0) return "";
+    const posRatio = positivePeople / total;
+    if (posRatio >= 0.7) return "Your world is filled with warmth";
+    if (posRatio >= 0.5) return "A balanced constellation of connections";
+    if (strainedPeople >= 2) return "Some relationships need attention";
+    return "Your connections are evolving";
+  }, [relationships, positivePeople, strainedPeople]);
+
+  const viewShotRef = useRef<ViewShot>(null);
 
   if (loading) {
     return (
@@ -671,6 +795,11 @@ export default function RelationshipsScreen() {
                     <Text style={{ fontSize: 10, color, fontWeight: "600", marginTop: 2 }}>
                       {sentimentLabel(rel.sentiment_trend)}
                     </Text>
+                    {rel.last_mentioned_at && (
+                      <Text style={{ fontSize: 9, color: "#52525B", marginTop: 1 }}>
+                        {recencyLabel(daysAgo(rel.last_mentioned_at))}
+                      </Text>
+                    )}
                   </View>
                 </Pressable>
               </Animated.View>
@@ -678,163 +807,354 @@ export default function RelationshipsScreen() {
           })}
         </View>
 
-        {/* Quick stats */}
+        {/* Insights section */}
         <Animated.View
           entering={FadeInDown.duration(400)}
           style={{
             backgroundColor: "#111827",
             borderRadius: 20,
             padding: 20,
-            marginBottom: 20,
+            marginBottom: 16,
           }}
         >
           <Text
             style={{
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: "700",
-              color: "#6B7280",
-              letterSpacing: 0.8,
+              color: "#52525B",
+              letterSpacing: 1,
               textTransform: "uppercase",
-              marginBottom: 14,
+              marginBottom: 16,
             }}
           >
             Your World at a Glance
           </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+
+          {/* Primary stats row */}
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
             <View
               style={{
                 flex: 1,
-                backgroundColor: "#1F2937",
+                backgroundColor: "#1A1F35",
                 borderRadius: 14,
                 padding: 14,
                 alignItems: "center",
               }}
             >
-              <Text
-                style={{ fontSize: 28, fontWeight: "800", color: "#F4F4F5" }}
-              >
+              <Text style={{ fontSize: 26, fontWeight: "800", color: "#F4F4F5" }}>
                 {relationships.length}
               </Text>
-              <Text style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-                People
+              <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 2, fontWeight: "600" }}>
+                PEOPLE
               </Text>
             </View>
             <View
               style={{
                 flex: 1,
-                backgroundColor: "#1F2937",
+                backgroundColor: "#1A1F35",
                 borderRadius: 14,
                 padding: 14,
                 alignItems: "center",
               }}
             >
-              <Text
-                style={{ fontSize: 28, fontWeight: "800", color: "#34D399" }}
-              >
+              <Text style={{ fontSize: 26, fontWeight: "800", color: "#34D399" }}>
                 {positivePeople}
               </Text>
-              <Text style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-                Positive
+              <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 2, fontWeight: "600" }}>
+                POSITIVE
               </Text>
             </View>
             <View
               style={{
                 flex: 1,
-                backgroundColor: "#1F2937",
+                backgroundColor: "#1A1F35",
                 borderRadius: 14,
                 padding: 14,
                 alignItems: "center",
               }}
             >
-              <Text
-                style={{ fontSize: 28, fontWeight: "800", color: "#A78BFA" }}
-              >
+              <Text style={{ fontSize: 26, fontWeight: "800", color: "#A78BFA" }}>
                 {totalMentions}
               </Text>
-              <Text style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-                Mentions
+              <Text style={{ fontSize: 10, color: "#6B7280", marginTop: 2, fontWeight: "600" }}>
+                MENTIONS
               </Text>
             </View>
           </View>
+
+          {/* Secondary insights */}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "#1A1F35",
+                borderRadius: 14,
+                padding: 12,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="git-network-outline" size={16} color="#60A5FA" style={{ marginRight: 8 }} />
+              <View>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#60A5FA" }}>
+                  {relationTypes}
+                </Text>
+                <Text style={{ fontSize: 9, color: "#6B7280", fontWeight: "600" }}>
+                  CIRCLES
+                </Text>
+              </View>
+            </View>
+            {energizingPeople > 0 && (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: "#1A1F35",
+                  borderRadius: 14,
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <Ionicons name="sunny-outline" size={16} color="#FBBF24" style={{ marginRight: 8 }} />
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#FBBF24" }}>
+                    {energizingPeople}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: "#6B7280", fontWeight: "600" }}>
+                    ENERGIZING
+                  </Text>
+                </View>
+              </View>
+            )}
+            {strainedPeople > 0 && (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: "#1A1F35",
+                  borderRadius: 14,
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <Ionicons name="flash-outline" size={16} color="#F87171" style={{ marginRight: 8 }} />
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#F87171" }}>
+                    {strainedPeople}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: "#6B7280", fontWeight: "600" }}>
+                    STRAINED
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Top topics */}
+          {allTopics.length > 0 && (
+            <View style={{ marginTop: 16 }}>
+              <Text style={{ fontSize: 10, color: "#52525B", fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 8 }}>
+                What you talk about most
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {allTopics.map(([topic, count]) => (
+                  <View
+                    key={topic}
+                    style={{
+                      backgroundColor: "#7C3AED15",
+                      borderRadius: 20,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderWidth: 1,
+                      borderColor: "#7C3AED25",
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#A78BFA" }}>
+                      {topic}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: "#7C3AED80", marginLeft: 4, fontWeight: "700" }}>
+                      {count}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </Animated.View>
 
         {/* Share card */}
-        <ShareableCard gradientIndex={4} minHeight={320}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "rgba(255,255,255,0.5)",
-              textTransform: "uppercase",
-              letterSpacing: 2,
+        <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+          <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1.0 }}>
+            <View style={{ borderRadius: 24, overflow: "hidden" }}>
+              <LinearGradient
+                colors={["#1A1040", "#0F172A", "#0A1628"]}
+                style={{
+                  padding: 28,
+                  minHeight: 420,
+                  justifyContent: "space-between",
+                }}
+              >
+                {/* Top — Title + Insight */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#5A6178", letterSpacing: 2, textTransform: "uppercase" }}>
+                    MY WORLD
+                  </Text>
+                  <Text style={{ fontSize: 20, fontWeight: "800", color: "#E4E4E7", marginTop: 6, lineHeight: 26 }}>
+                    {worldInsight}
+                  </Text>
+                </View>
+
+                {/* Center — Mini constellation */}
+                <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                  <View style={{ width: 200, height: 140, position: "relative" }}>
+                    {/* Center node */}
+                    <View
+                      style={{
+                        position: "absolute",
+                        left: 88,
+                        top: 58,
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: "#7C3AED40",
+                        borderWidth: 2,
+                        borderColor: "#7C3AED",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ fontSize: 9, fontWeight: "900", color: "#A78BFA" }}>ME</Text>
+                    </View>
+                    {/* Orbit nodes — show up to 6 closest people */}
+                    {relationships.slice(0, 6).map((r, i) => {
+                      const angle = (i / Math.min(relationships.length, 6)) * Math.PI * 2 - Math.PI / 2;
+                      const radius = 52;
+                      const cx = 100 + Math.cos(angle) * radius;
+                      const cy = 70 + Math.sin(angle) * radius;
+                      const c = sentimentColor(r.sentiment_trend);
+                      const sz = Math.min(18 + r.mentioned_count * 2, 28);
+                      return (
+                        <View
+                          key={r.id}
+                          style={{
+                            position: "absolute",
+                            left: cx - sz / 2,
+                            top: cy - sz / 2,
+                            width: sz,
+                            height: sz,
+                            borderRadius: sz / 2,
+                            backgroundColor: `${c}25`,
+                            borderWidth: 1.5,
+                            borderColor: c,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text style={{ fontSize: Math.max(sz * 0.4, 8), fontWeight: "800", color: c }}>
+                            {r.name.charAt(0)}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Bottom — Key stats */}
+                <View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <Text style={{ fontSize: 28, fontWeight: "900", color: "#F4F4F5" }}>
+                        {relationships.length}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: "#5A6178", fontWeight: "600", marginTop: 2 }}>
+                        PEOPLE
+                      </Text>
+                    </View>
+                    <View style={{ width: 1, backgroundColor: "#242A42" }} />
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <Text style={{ fontSize: 28, fontWeight: "900", color: "#34D399" }}>
+                        {positivePeople}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: "#5A6178", fontWeight: "600", marginTop: 2 }}>
+                        POSITIVE
+                      </Text>
+                    </View>
+                    <View style={{ width: 1, backgroundColor: "#242A42" }} />
+                    <View style={{ alignItems: "center", flex: 1 }}>
+                      <Text style={{ fontSize: 28, fontWeight: "900", color: "#A78BFA" }}>
+                        {relationTypes}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: "#5A6178", fontWeight: "600", marginTop: 2 }}>
+                        CIRCLES
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Top people names */}
+                  {topMentioned && (
+                    <View style={{
+                      paddingTop: 12,
+                      borderTopWidth: 0.5,
+                      borderTopColor: "#242A42",
+                    }}>
+                      <Text style={{ fontSize: 11, color: "#5A6178", textAlign: "center" }}>
+                        Closest: {relationships.slice(0, 3).map((r) => r.name).join(", ")}
+                        {relationships.length > 3 ? ` +${relationships.length - 3}` : ""}
+                      </Text>
+                    </View>
+                  )}
+
+                  <ShareFooter variant="dark" />
+                </View>
+              </LinearGradient>
+            </View>
+          </ViewShot>
+
+          {/* Share button */}
+          <Pressable
+            onPress={async () => {
+              try {
+                const uri = await viewShotRef.current?.capture?.();
+                if (!uri) return;
+                await hapticSuccess();
+                await Sharing.shareAsync(uri, {
+                  mimeType: "image/png",
+                  dialogTitle: "Share your Lumis card",
+                });
+              } catch (e) {
+                console.warn("Share failed:", e);
+              }
             }}
-          >
-            My World
-          </Text>
-          <Text
             style={{
-              fontSize: 56,
-              fontWeight: "900",
-              color: "white",
-              marginTop: 8,
-            }}
-          >
-            {relationships.length}
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              color: "rgba(255,255,255,0.7)",
-              letterSpacing: 1,
-            }}
-          >
-            people in my life
-          </Text>
-          <View
-            style={{
-              marginTop: 24,
               flexDirection: "row",
-              gap: 24,
+              alignItems: "center",
               justifyContent: "center",
+              marginTop: 12,
+              borderRadius: 14,
+              overflow: "hidden",
             }}
           >
-            <View style={{ alignItems: "center" }}>
-              <Text
-                style={{ fontSize: 22, fontWeight: "800", color: "white" }}
-              >
-                {totalMentions}
-              </Text>
-              <Text
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}
-              >
-                mentions
-              </Text>
-            </View>
-            <View style={{ alignItems: "center" }}>
-              <Text
-                style={{ fontSize: 22, fontWeight: "800", color: "#34D399" }}
-              >
-                {positivePeople}
-              </Text>
-              <Text
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}
-              >
-                positive
-              </Text>
-            </View>
-          </View>
-          {topMentioned && (
-            <Text
+            <LinearGradient
+              colors={["#6366F1", "#2DD4BF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={{
-                fontSize: 13,
-                color: "rgba(255,255,255,0.6)",
-                marginTop: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 14,
+                paddingHorizontal: 24,
+                borderRadius: 14,
+                width: "100%",
               }}
             >
-              Most talked about: {topMentioned}
-            </Text>
-          )}
-        </ShareableCard>
+              <Ionicons name="share-social" size={18} color="white" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "white" }}>Share My World</Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

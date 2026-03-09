@@ -41,8 +41,10 @@ function RootLayout() {
       registerPushToken().catch(() => {});
       initSubscription(user?.id).catch(() => {});
       if (user?.id) identify(user.id, { email: user.email });
+    } else if (!isLoading) {
+      router.replace("/(auth)/sign-in");
     }
-  }, [session]);
+  }, [session, isLoading]);
 
   // Process active chat session when app goes to background (5-min grace period)
   const appStateRef = useRef(AppState.currentState);

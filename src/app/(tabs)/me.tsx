@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import Markdown from "react-native-markdown-display";
 import { Paths, File as ExpoFile } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useRouter } from "expo-router";
@@ -24,9 +25,58 @@ import { useSubscriptionStore } from "@/store/subscription";
 import { useReferralStore } from "@/store/referral";
 import { supabase } from "@/lib/supabase";
 import { hapticLight } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import type { MemoryCategory, UserMemory } from "@/types/database";
 
 type ViewMode = "memory_doc" | "legacy";
+
+const markdownStyles = {
+  body: { color: "#E4E4E7", fontSize: 14, lineHeight: 22 },
+  heading2: {
+    color: "#A78BFA",
+    fontSize: 16,
+    fontWeight: "700" as const,
+    marginTop: 20,
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#27272A",
+  },
+  heading3: {
+    color: "#D4D4D8",
+    fontSize: 15,
+    fontWeight: "600" as const,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  strong: { color: "#F4F4F5", fontWeight: "600" as const },
+  em: { color: "#A1A1AA", fontStyle: "italic" as const },
+  paragraph: { color: "#E4E4E7", fontSize: 14, lineHeight: 22, marginBottom: 8 },
+  bullet_list: { marginVertical: 4 },
+  ordered_list: { marginVertical: 4 },
+  list_item: { marginVertical: 2 },
+  bullet_list_icon: { color: "#7C3AED", fontSize: 8, marginTop: 8, marginRight: 8 },
+  ordered_list_icon: { color: "#7C3AED", fontSize: 14, marginRight: 8 },
+  fence: {
+    backgroundColor: "#1E1E27",
+    borderRadius: 8,
+    padding: 12,
+    color: "#E4E4E7",
+    fontSize: 13,
+  },
+  code_inline: { backgroundColor: "#1E1E27", color: "#A78BFA", borderRadius: 4, paddingHorizontal: 4 },
+  blockquote: {
+    backgroundColor: "#1E1E2780",
+    borderLeftWidth: 3,
+    borderLeftColor: "#8B5CF6",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginVertical: 8,
+    borderRadius: 4,
+  },
+  hr: { backgroundColor: "#27272A", height: 1, marginVertical: 16 },
+  link: { color: "#2DD4BF", textDecorationLine: "none" as const },
+};
 
 const CATEGORY_CONFIG: { category: MemoryCategory; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
   { category: "goal", icon: "flag-outline", label: "Goals" },
@@ -143,6 +193,8 @@ export default function MeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
+  useEffect(() => { screen("me"); }, []);
+
   const loadAllData = useCallback(async () => {
     await Promise.all([
       fetchMemoryDoc(),
@@ -178,6 +230,7 @@ export default function MeScreen() {
 
   const handleExportData = async () => {
     setIsExporting(true);
+    track("data_exported");
     try {
       const { data, error } = await supabase.functions.invoke("export-data", { method: "GET" });
       if (error) throw error;
@@ -398,9 +451,9 @@ export default function MeScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: "#F4F4F5", lineHeight: 22 }}>
+                <Markdown style={markdownStyles}>
                   {memoryDoc.content}
-                </Text>
+                </Markdown>
               </Animated.View>
             ) : (
               <View style={{ alignItems: "center", paddingVertical: 48 }}>
@@ -479,6 +532,7 @@ export default function MeScreen() {
                 <Pressable
                   onPress={async () => {
                     await hapticLight();
+                    track("referral_shared");
                     await Share.share({
                       message: `I've been working on myself with Lumis — an AI growth companion that actually gets me. Try it free: lumis.app/r/${referralCode}`,
                     });

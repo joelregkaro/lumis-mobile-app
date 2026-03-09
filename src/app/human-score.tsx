@@ -19,6 +19,8 @@ import RadarChart from "@/components/humanScore/RadarChart";
 import AnimatedNumber from "@/components/humanScore/AnimatedNumber";
 import { useHumanScoreStore, getTier, xpForLevel, TIERS, type HumanScore } from "@/store/humanScore";
 import { hapticLight } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
+import { screen } from "@/lib/analytics";
 
 const AnimatedSvgCircle = Animated.createAnimatedComponent(SvgCircle);
 
@@ -291,6 +293,8 @@ export default function HumanScoreScreen() {
   const [computing, setComputing] = useState(false);
   const [expandedAttr, setExpandedAttr] = useState<string | null>(null);
 
+  useEffect(() => { screen("human_score"); }, []);
+
   const loadAll = useCallback(async () => {
     await fetchLatestScore();
     await fetchLeagueStanding();
@@ -298,6 +302,7 @@ export default function HumanScoreScreen() {
   }, []);
 
   useEffect(() => {
+    track("human_score_viewed", { level, total_xp: totalXp });
     loadAll().then(() => {
       const { latestScore } = useHumanScoreStore.getState();
       if (!latestScore) {

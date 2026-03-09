@@ -25,9 +25,16 @@ import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import type { CompanionExpression } from "@/components/companion/CompanionAvatar";
 import { useVoiceChatStore } from "@/store/voiceChat";
 import { useGeminiVoice } from "@/hooks/useGeminiVoice";
+import type { ToolCallResult } from "@/hooks/useGeminiVoice";
 import { hapticLight, hapticMedium } from "@/lib/haptics";
+import { screen } from "@/lib/analytics";
 import { useStreakStore } from "@/store/streak";
 import { supabase } from "@/lib/supabase";
+import {
+  startVoiceSessionActivity,
+  updateVoiceSessionActivity,
+  endVoiceSessionActivity,
+} from "@/lib/liveActivity";
 import type { VoiceTranscriptMessage } from "@/store/voiceChat";
 
 function formatTime(seconds: number): string {
@@ -59,9 +66,147 @@ export default function VoiceChatScreen() {
     setElapsed,
   } = useVoiceChatStore();
 
+  const handleToolCall = useCallback(async (call: ToolCallResult): Promise<Record<string, any>> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Not authenticated" };
+    const userId = user.id;
+
+    switch (call.name) {
+      case "complete_habit": {
+        const { habit_title, outcome = "done" } = call.args;
+        const { data: habits } = await supabase
+          .from("habits").select("id, title, current_streak")
+          .eq("user_id", userId).eq("status", "active")
+          .ilike("title", `%${habit_title}%`).limit(1);
+        if (!habits?.length) return { success: false, error: `No active habit matching "${habit_title}"` };
+        const habit = habits[0];
+        const today = new Date().toISOString().split("T")[0];
+        const { data: existing } = await supabase
+          .from("habit_completions").select("id")
+          .eq("habit_id", habit.id).eq("completed_date", today).limit(1);
+        if (existing?.length) return { success: true, message: `"${habit.title}" already recorded for today`, streak: habit.current_streak };
+        await supabase.from("habit_completions").insert({
+          habit_id: habit.id, user_id: userId, completed_date: today,
+          quality: outcome === "done" ? 5 : 3, reflection_type: "completion",
+        });
+        const newStreak = (habit.current_streak ?? 0) + 1;
+        await supabase.from("habits").update({
+          current_streak: newStreak,
+          total_completions: habit.current_streak + 1,
+          consecutive_misses: 0,
+        }).eq("id", habit.id);
+        return { success: true, habit_title: habit.title, new_streak: newStreak, message: `Marked "${habit.title}" as ${outcome}! ${newStreak}-day streak!` };
+      }
+      case "create_goal": {
+        const { title, description, category, target_date } = call.args;
+        const { data: goal, error: err } = await supabase.from("goals").insert({
+          user_id: userId, title, description: description ?? null,
+          category: category ?? "personal_growth",
+          target_date: target_date ?? null, status: "active",
+        }).select("id, title").single();
+        if (err) return { success: false, error: err.message };
+        return { success: true, goal_id: goal.id, message: `Goal "${title}" created!` };
+      }
+      case "create_habit": {
+        const { title, description, frequency, preferred_time, anchor_behavior, tiny_version, identity_statement, celebration } = call.args;
+        const { data: existing } = await supabase
+          .from("habits").select("id").eq("user_id", userId)
+          .ilike("title", `%${title}%`).in("status", ["active", "paused"]).limit(1);
+        if (existing?.length) return { success: false, error: `Habit similar to "${title}" already exists` };
+        const { data: habit, error: err } = await supabase.from("habits").insert({
+          user_id: userId, title, description: description ?? null,
+          frequency, preferred_time: preferred_time ?? null,
+          anchor_behavior: anchor_behavior ?? null, tiny_version: tiny_version ?? null,
+          identity_statement: identity_statement ?? null, celebration: celebration ?? null,
+          status: "active", difficulty: "tiny",
+        }).select("id, title").single();
+        if (err) return { success: false, error: err.message };
+        return { success: true, habit_id: habit.id, message: `Habit "${title}" created! I'll track your streak.` };
+      }
+      case "set_reminder": {
+        const { title, body, scheduled_for } = call.args;
+        const sid = useVoiceChatStore.getState().sessionId;
+        await supabase.from("reminders").insert({
+          user_id: userId, session_id: sid, title, body: body ?? null,
+          scheduled_for, status: "pending",
+        });
+        const when = new Date(scheduled_for);
+        const timeStr = when.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        return { success: true, message: `Reminder set for ${timeStr}: "${title}"` };
+      }
+      case "log_mood": {
+        const { mood_score, notes } = call.args;
+        await supabase.from("mood_entries").insert({
+          user_id: userId, mood_score, notes: notes ?? null,
+        });
+        return { success: true, message: `Mood logged: ${mood_score}/10${notes ? ` — "${notes}"` : ""}` };
+      }
+      case "capture_insight": {
+        const { insight, category } = call.args;
+        const sid = useVoiceChatStore.getState().sessionId;
+        await supabase.from("session_echoes").insert({
+          user_id: userId, session_id: sid,
+          action_item: insight, context: `Breakthrough insight (${category ?? "general"})`,
+          status: "noted", echo_type: "insight",
+        });
+        return { success: true, message: "Insight captured — I'll reference this in future sessions." };
+      }
+      case "run_scaling_question": {
+        const { topic, score, follow_up } = call.args;
+        const sid = useVoiceChatStore.getState().sessionId;
+        await supabase.from("session_echoes").insert({
+          user_id: userId, session_id: sid,
+          action_item: `Scaling: "${topic}" → ${score}/10${follow_up ? `. To move up: ${follow_up}` : ""}`,
+          context: "Scaling exercise during voice session",
+          status: "noted", echo_type: "scaling",
+        });
+        return { success: true, score, topic, message: `Recorded: ${topic} at ${score}/10` };
+      }
+      case "get_context": {
+        const { context_type, query } = call.args;
+        switch (context_type) {
+          case "habit_details": {
+            const { data } = await supabase.from("habits")
+              .select("title, description, frequency, current_streak, longest_streak, total_completions, anchor_behavior, tiny_version, difficulty, identity_statement, celebration, consecutive_misses, created_at")
+              .eq("user_id", userId).ilike("title", `%${query}%`).limit(1).single();
+            return data ? { success: true, habit: data } : { success: false, error: "Habit not found" };
+          }
+          case "goal_progress": {
+            const { data } = await supabase.from("goals")
+              .select("title, description, status, target_date, progress_notes, milestones, category")
+              .eq("user_id", userId).ilike("title", `%${query}%`).limit(1).single();
+            return data ? { success: true, goal: data } : { success: false, error: "Goal not found" };
+          }
+          case "relationship": {
+            const { data } = await supabase.from("relationships")
+              .select("name, relation_type, sentiment_trend, emotional_impact, topics, mentioned_count")
+              .eq("user_id", userId).ilike("name", `%${query}%`).limit(1).single();
+            return data ? { success: true, relationship: data } : { success: false, error: "Person not found" };
+          }
+          case "past_sessions": {
+            const { data } = await supabase.from("sessions")
+              .select("session_number, summary, key_themes, started_at")
+              .eq("user_id", userId).not("summary", "is", null)
+              .order("started_at", { ascending: false }).limit(5);
+            const relevant = (data ?? []).filter(s =>
+              s.summary?.toLowerCase().includes(query.toLowerCase()) ||
+              s.key_themes?.some((t: string) => t.toLowerCase().includes(query.toLowerCase()))
+            );
+            return { success: true, sessions: relevant.length > 0 ? relevant : data?.slice(0, 3) ?? [] };
+          }
+          default:
+            return { success: false, error: "Unknown context type" };
+        }
+      }
+      default:
+        return { success: false, error: `Unknown function: ${call.name}` };
+    }
+  }, []);
+
   const {
     connect,
     disconnect,
+    killAudio,
     isConnected,
     isSpeaking,
     status: voiceStatus,
@@ -75,12 +220,17 @@ export default function VoiceChatScreen() {
     },
     onStatusChange: (newStatus) => {
       if (newStatus === "connected") setStatus("listening");
-      else if (newStatus === "error") setStatus("error");
+      else if (newStatus === "error") {
+        setStatus("error");
+        endVoiceSessionActivity();
+      }
     },
     onError: (errMsg) => {
       setStatus("error");
+      endVoiceSessionActivity();
       Alert.alert("Voice Session Error", errMsg);
     },
+    onToolCall: handleToolCall,
   });
 
   // Derive companion expression from state
@@ -101,7 +251,8 @@ export default function VoiceChatScreen() {
     return "";
   })();
 
-  // Start session on mount
+  useEffect(() => { screen("voice_chat"); }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -122,14 +273,30 @@ export default function VoiceChatScreen() {
     return () => {
       cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
+      endVoiceSessionActivity();
     };
   }, []);
 
-  // Timer
+  // Timer + Live Activity
   useEffect(() => {
     if (isConnected && !timerRef.current) {
+      startVoiceSessionActivity({
+        companionName,
+        sessionNumber,
+        elapsedSeconds: 0,
+        status: "listening",
+      });
+
       timerRef.current = setInterval(() => {
-        setElapsed(useVoiceChatStore.getState().elapsed + 1);
+        const state = useVoiceChatStore.getState();
+        const next = state.elapsed + 1;
+        setElapsed(next);
+        updateVoiceSessionActivity({
+          companionName: state.companionName,
+          sessionNumber: state.sessionNumber,
+          elapsedSeconds: next,
+          status: state.status === "speaking" ? "speaking" : "listening",
+        });
       }, 1000);
     }
 
@@ -139,7 +306,7 @@ export default function VoiceChatScreen() {
         timerRef.current = null;
       }
     };
-  }, [isConnected, setElapsed]);
+  }, [isConnected, setElapsed, companionName, sessionNumber]);
 
   // Update store speaking status
   useEffect(() => {
@@ -156,16 +323,13 @@ export default function VoiceChatScreen() {
     }
   }, [transcriptMessages.length]);
 
-  // 15-minute session limit warning
+  // Gentle session length nudge (no hard cap — compression handles unlimited length)
   useEffect(() => {
-    if (elapsed === 600) {
+    if (elapsed === 1800) {
       Alert.alert(
-        "5 Minutes Remaining",
-        "Voice sessions have a 15-minute limit. You can start a new session after this one ends.",
+        "30-Minute Check-in",
+        "You've been going for 30 minutes — that's a great deep session! Take your time.",
       );
-    }
-    if (elapsed >= 870) {
-      handleEndSession();
     }
   }, [elapsed]);
 
@@ -177,7 +341,6 @@ export default function VoiceChatScreen() {
   }, [storeMuted, setStoreMuted, setVoiceMuted]);
 
   const handleEndSession = useCallback(async () => {
-    console.log("[VoiceChat] handleEndSession called, isEnding:", isEnding);
     if (isEnding) return;
     setIsEnding(true);
 
@@ -188,63 +351,93 @@ export default function VoiceChatScreen() {
       timerRef.current = null;
     }
 
+    endVoiceSessionActivity();
+
     // Snapshot transcript data from store BEFORE any cleanup
-    const { sessionId: sid, transcriptMessages: msgs, _accessToken: token } =
+    const { sessionId: sid, transcriptMessages: msgs } =
       useVoiceChatStore.getState();
 
-    // Navigate away immediately
-    console.log("[VoiceChat] Navigating away");
-    try {
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace("/");
+    // Build transcript payload, merging consecutive same-role messages
+    // (Gemini Live can fire multiple turnComplete events per logical turn,
+    //  causing the transcription to split one response into multiple entries)
+    let transcript: { role: string; content: string }[] | null = null;
+    if (sid && msgs.length > 0) {
+      const merged: { role: string; content: string }[] = [];
+      for (const m of msgs) {
+        const last = merged[merged.length - 1];
+        if (last && last.role === m.role) {
+          last.content += " " + m.content;
+        } else {
+          merged.push({ role: m.role, content: m.content });
+        }
       }
-    } catch {
-      router.replace("/");
+      transcript = merged;
     }
 
-    // Save transcript in background using snapshotted data (not dependent on store/component)
-    (async () => {
-      try {
-        if (sid && msgs.length > 0) {
-          const transcript = msgs.map((m) => ({ role: m.role, content: m.content }));
-          let authToken = token;
-          if (!authToken) {
-            const { data } = await supabase.auth.refreshSession();
-            authToken = data.session?.access_token ?? null;
-          }
-          if (authToken) {
-            const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/voice-session-end`;
-            let res = await fetch(url, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ session_id: sid, transcript }),
-            });
-            if (res.status === 401) {
-              const { data } = await supabase.auth.refreshSession();
-              const fresh = data.session?.access_token;
-              if (fresh) {
-                res = await fetch(url, {
-                  method: "POST",
-                  headers: { Authorization: `Bearer ${fresh}`, "Content-Type": "application/json" },
-                  body: JSON.stringify({ session_id: sid, transcript }),
-                });
-              }
-            }
-            console.log("[VoiceChat] Background save:", res.ok ? "success" : res.status);
-          }
-        }
-      } catch (e) {
-        console.error("[VoiceChat] Background save error:", e);
-      }
-    })();
+    // Navigate away immediately for responsive UX
+    killAudio();
+    try {
+      router.navigate("/(tabs)/home");
+    } catch {
+      try { router.dismissAll(); } catch {}
+      try { router.replace("/(tabs)/home"); } catch { router.replace("/"); }
+    }
 
-    // Disconnect audio/WS and update streak in background
-    disconnect().catch(() => {});
-    useStreakStore.getState().updateStreak();
-    useVoiceChatStore.getState().reset();
-  }, [isEnding, disconnect, router]);
+    // Save transcript via direct PostgREST writes, then disconnect audio
+    // IMPORTANT: disconnect() must happen AFTER save — iOS XHR breaks during WS teardown
+    if (transcript && sid) {
+      setTimeout(async () => {
+        try {
+          const messagesToInsert = transcript.map((msg) => ({
+            session_id: sid,
+            role: msg.role,
+            content: msg.content,
+          }));
+
+          const { error: insertErr } = await supabase
+            .from("messages")
+            .insert(messagesToInsert);
+
+          if (insertErr) {
+            console.error("[VoiceChat] Message insert failed:", insertErr.message);
+          } else {
+            console.log("[VoiceChat] Messages saved:", messagesToInsert.length);
+          }
+
+          const rawLog = transcript
+            .map((m) => `${m.role === "user" ? "User" : "Lumis"}: ${m.content}`)
+            .join("\n\n");
+
+          const { error: updateErr } = await supabase
+            .from("sessions")
+            .update({ ended_at: new Date().toISOString(), raw_log: rawLog })
+            .eq("id", sid);
+
+          if (updateErr) {
+            console.error("[VoiceChat] Session update failed:", updateErr.message);
+          } else {
+            console.log("[VoiceChat] Session ended successfully");
+          }
+
+          // Trigger post-session processing (fire-and-forget)
+          supabase.functions
+            .invoke("process-session", { body: { session_id: sid } })
+            .catch(() => {});
+        } catch (e) {
+          console.error("[VoiceChat] Background save error:", e);
+        }
+
+        // Disconnect audio/WS ONLY after save completes
+        disconnect().catch(() => {});
+        useStreakStore.getState().updateStreak();
+        useVoiceChatStore.getState().reset();
+      }, 100);
+    } else {
+      disconnect().catch(() => {});
+      useStreakStore.getState().updateStreak();
+      useVoiceChatStore.getState().reset();
+    }
+  }, [isEnding, disconnect, killAudio, router]);
 
   const confirmEndSession = useCallback(() => {
     hapticLight();

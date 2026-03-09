@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { hapticSuccess } from "@/lib/haptics";
 import { colors } from "@/constants/theme";
+import ShareFooter from "@/components/share/ShareFooter";
 
 const c = colors.dark;
 
@@ -106,9 +107,7 @@ export default function FirstReadModal({ visible, data, onDismiss }: Props) {
                   </View>
                 </View>
 
-                <Text style={{ fontSize: 9, color: "#5A617840", marginTop: 20, letterSpacing: 3, fontWeight: "600", textAlign: "center" }}>
-                  lumis.app
-                </Text>
+                <ShareFooter variant="dark" />
               </LinearGradient>
             </View>
           </ViewShot>

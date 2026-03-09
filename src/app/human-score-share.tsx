@@ -9,6 +9,7 @@ import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { useHumanScoreStore, getTier } from "@/store/humanScore";
 import { hapticSuccess } from "@/lib/haptics";
+import ShareFooter from "@/components/share/ShareFooter";
 
 const ATTR_META: Record<string, { label: string; color: string; icon: string }> = {
   awareness: { label: "Awareness", color: "#A78BFA", icon: "eye-outline" },
@@ -178,10 +179,7 @@ export default function HumanScoreShareScreen() {
                 </Text>
               </View>
 
-              {/* Watermark */}
-              <Text style={{ fontSize: 10, color: "#5A617850", marginTop: 14, letterSpacing: 3, fontWeight: "600" }}>
-                lumis.app
-              </Text>
+              <ShareFooter variant="dark" />
             </LinearGradient>
           </View>
         </ViewShot>

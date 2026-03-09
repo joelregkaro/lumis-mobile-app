@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useDailyCheckinStore } from "@/store/dailyCheckin";
 import * as Haptics from "expo-haptics";
+import { screen } from "@/lib/analytics";
 
 const RATINGS = [
   { value: 1, emoji: "😔", label: "Rough" },
@@ -25,6 +26,8 @@ const RATINGS = [
 
 export default function EveningReflectionScreen() {
   const { todaysCheckin, setEveningReflection, fetchToday } = useDailyCheckinStore();
+
+  useEffect(() => { screen("evening_reflection"); }, []);
 
   const [step, setStep] = useState(0);
   const [rating, setRating] = useState(0);
