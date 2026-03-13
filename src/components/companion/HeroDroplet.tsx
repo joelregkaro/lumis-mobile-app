@@ -196,7 +196,6 @@ mat2 rot(float a) {
 }
 
 float eggSDF(vec2 p) {
-  // Plump egg: narrow top, wide bottom
   float t = clamp((p.y + 0.02) / 0.46 + 0.5, 0.0, 1.0);
   float w = mix(0.15, 0.25, t) - 0.035 * t * t;
   return length(vec2(p.x / max(w, 0.01), p.y / 0.27)) - 1.0;
@@ -211,10 +210,25 @@ vec2 poseSpace(vec2 uv) {
   return p;
 }
 
-float fresnel(float d) {
-  // Active in a band near the edge -- wider for visible glass rim
-  float edge = smoothstep(-0.025, -0.004, d) * (1.0 - smoothstep(-0.003, 0.002, d));
-  return edge;
+// Fake 3D normal from 2D SDF (imadr technique, finite-diff for SkSL)
+vec3 eggNormal(vec2 p, float d, float thickness) {
+  float eps = 0.002;
+  vec2 grad = vec2(
+    eggSDF(p + vec2(eps, 0.0)) - eggSDF(p - vec2(eps, 0.0)),
+    eggSDF(p + vec2(0.0, eps)) - eggSDF(p - vec2(0.0, eps))
+  ) / (2.0 * eps);
+  float nc = clamp((thickness + d) / thickness, 0.0, 1.0);
+  float ns = sqrt(max(1.0 - nc * nc, 0.0));
+  return normalize(vec3(grad * nc, ns + 0.001));
+}
+
+float fresnelSchlick(float cosTheta, float f0) {
+  return f0 + (1.0 - f0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+float blinnPhong(vec3 n, vec3 v, vec3 l, float shininess) {
+  vec3 h = normalize(v + l);
+  return pow(max(dot(n, h), 0.0), shininess);
 }
 
 vec4 main(vec2 fc) {
@@ -233,39 +247,51 @@ vec4 main(vec2 fc) {
   float outer = 1.0 - smoothstep(-0.004, 0.002, d);
   if (outer < 0.001) return vec4(haloCol * haloStr, haloStr * 0.5);
 
-  // --- Fresnel-based rim lighting (the key to the glass look) ---
-  float fres = fresnel(d);
-  float topBias = smoothstep(0.05, -0.28, p.y);
-  float botBias = smoothstep(-0.04, 0.26, p.y);
-  float leftBias = smoothstep(0.02, -0.16, p.x);
+  // --- Physically-based glass lighting via fake 3D normals ---
+  float thickness = 0.08;
+  vec3 N = eggNormal(p, d, thickness);
+  vec3 V = vec3(0.0, 0.0, 1.0);
+  float NdotV = max(dot(N, V), 0.0);
 
-  // Rim colors: bright white/silver at crown, warm gold at bottom
-  vec3 rimSilver = vec3(0.92, 0.88, 1.0);
-  vec3 rimGold = vec3(1.0, 0.78, 0.32);
-  vec3 rimPurple = vec3(0.68, 0.52, 0.92);
-  vec3 rimCol = mix(rimPurple, rimSilver, topBias * 0.8 + leftBias * 0.3);
-  rimCol = mix(rimCol, rimGold, botBias * (0.55 + iWarm * 0.30));
+  // Fresnel rim (Schlick, F0=0.04 for glass)
+  float fres = fresnelSchlick(NdotV, 0.04);
 
-  float negD = max(0.0, 0.0 - d);
-  float specMask = 1.0 - clamp(negD * 5.0, 0.0, 1.0);
+  // Boost fresnel at edge zone where the bevel is steepest
+  float edgeBand = smoothstep(-thickness, 0.0, d) * (1.0 - smoothstep(0.0, 0.003, d));
+  fres = fres + edgeBand * 0.4;
 
-  float crownSpec = exp(0.0 - (pow((p.x + 0.04) * 5.5, 2.0) + pow((p.y + 0.24) * 11.0, 2.0)));
-  float crownBright = crownSpec * 5.0 * specMask;
+  // Three light sources matching the reference image
+  vec3 lightCrown    = normalize(vec3( 0.05,  0.8,  0.6));
+  vec3 lightLeft     = normalize(vec3(-0.7,   0.2,  0.5));
+  vec3 lightBottom   = normalize(vec3( 0.0,  -0.7,  0.5));
 
-  // Left side specular: bright band running down the left edge of the egg
-  float leftSpec = exp(0.0 - pow((p.x + 0.13) * 9.0, 2.0) - pow(p.y * 1.6, 2.0)) * 1.4 * specMask;
+  vec3 colCrown  = vec3(0.95, 0.92, 1.0);
+  vec3 colLeft   = vec3(0.82, 0.78, 1.0);
+  vec3 colBottom = vec3(1.0, 0.78, 0.32);
 
-  // Bottom gold arc: wide, bright, the warm signature
-  float goldArc = exp(0.0 - (p.x * p.x * 4.5 + (p.y - 0.22) * (p.y - 0.22) * 22.0)) * 2.0 * specMask;
+  float specCrown  = blinnPhong(N, V, lightCrown,  80.0) * 3.5;
+  float specLeft   = blinnPhong(N, V, lightLeft,   60.0) * 2.2;
+  float specBottom = blinnPhong(N, V, lightBottom,  50.0) * 2.8;
 
-  // Right side rim: present but subtler
-  float rightRim = exp(0.0 - pow((p.x - 0.13) * 12.0, 2.0) - pow(p.y * 2.2, 2.0)) * 0.45 * specMask;
+  // Diffuse contribution (subtle, keeps the form visible)
+  float diffCrown  = max(dot(N, lightCrown),  0.0) * 0.15;
+  float diffLeft   = max(dot(N, lightLeft),   0.0) * 0.10;
+  float diffBottom = max(dot(N, lightBottom), 0.0) * 0.12;
 
-  // Continuous fresnel rim along the entire edge
-  float rimTotal = fres * 1.4 + crownBright + leftSpec + goldArc + rightRim;
-  vec3 rimLight = rimCol * rimTotal;
-  rimLight += rimSilver * crownBright * 1.0;
-  rimLight += rimGold * goldArc * 0.75;
+  // Warm boost from state
+  float warmMul = 1.0 + iWarm * 0.4 + iEncourage * 0.2;
+
+  vec3 specTotal = colCrown  * (specCrown + diffCrown)
+                 + colLeft   * (specLeft  + diffLeft)
+                 + colBottom * (specBottom + diffBottom) * warmMul;
+
+  // Reflected environment approximation (purple-tinted upper hemisphere)
+  vec3 R = reflect(-V, N);
+  float envUp = smoothstep(-0.2, 0.6, R.y);
+  vec3 envColor = mix(vec3(0.08, 0.04, 0.18), vec3(0.25, 0.18, 0.42), envUp);
+  vec3 reflected = envColor * fres * 1.8;
+
+  vec3 rimLight = specTotal + reflected;
 
   // --- Dark glass interior (deep indigo, not pure black) ---
   vec3 body = mix(
@@ -324,14 +350,14 @@ vec4 main(vec2 fc) {
   body += vec3(0.32, 0.68, 0.88) * (gL + gR) * eyeVis;
 
   // --- Final composite ---
-  // Body fills the interior, rim overlays at the edge
   float interiorMask = 1.0 - smoothstep(-0.002, 0.001, d + 0.006);
   float bodyAlpha = interiorMask * 0.97;
   vec4 result = vec4(body * bodyAlpha, bodyAlpha);
 
-  // Add rim light on top -- ensure it's bright enough to be visible
-  float rimAlpha = clamp(rimTotal * 0.8, 0.0, 1.0) * outer;
-  result.rgb += rimLight * 1.5 * outer;
+  // Add physically-based rim/specular on top
+  float rimStr = length(rimLight);
+  float rimAlpha = clamp(rimStr * 0.6, 0.0, 1.0) * outer;
+  result.rgb += rimLight * 1.6 * outer;
   result.a = max(result.a, rimAlpha);
 
   // Halo behind (outside the form)
