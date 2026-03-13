@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -347,7 +347,7 @@ function AiBubble({ text, delay = 0 }: { text: string; delay?: number }) {
 // --- Main Onboarding Screen ---
 
 export default function OnboardingScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { user, setOnboarded, fetchProfile } = useAuthStore();
   const ob = useOnboardingStore();
 
@@ -500,7 +500,7 @@ export default function OnboardingScreen() {
       setOnboarded(true);
       ob.reset();
       track("onboarding_completed", trackData);
-      router.replace("/(tabs)/chat");
+      navigation.reset({ index: 0, routes: [{ name: "Tabs" as never, params: { screen: "chat" } }] });
     } catch (err: any) {
       console.error("[Onboarding] finish failed:", err?.message ?? err);
       Alert.alert("Something went wrong", "Couldn't save your preferences. Please try again.");
@@ -1164,7 +1164,7 @@ export default function OnboardingScreen() {
                 </Text>
 
                 <Pressable
-                  onPress={() => router.push("/(auth)/sign-up")}
+                  onPress={() => navigation.navigate("Auth" as never, { screen: "sign-up" })}
                   style={{
                     width: "100%",
                     backgroundColor: c.brand.purple,
@@ -1178,7 +1178,7 @@ export default function OnboardingScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => router.push("/(auth)/sign-in")}
+                  onPress={() => navigation.navigate("Auth" as never, { screen: "sign-in" })}
                   style={{
                     width: "100%",
                     backgroundColor: c.bg.surface,
@@ -1249,11 +1249,11 @@ export default function OnboardingScreen() {
                   />
                   <Text style={{ flex: 1, fontSize: 13, color: c.text.secondary, lineHeight: 18 }}>
                     I agree to the{" "}
-                    <Text style={{ color: c.brand.purple, fontWeight: "600" }} onPress={() => router.push("/privacy" as any)}>
+                    <Text style={{ color: c.brand.purple, fontWeight: "600" }} onPress={() => navigation.navigate("privacy" as never)}>
                       Privacy Policy
                     </Text>{" "}
                     and{" "}
-                    <Text style={{ color: c.brand.purple, fontWeight: "600" }} onPress={() => router.push("/terms" as any)}>
+                    <Text style={{ color: c.brand.purple, fontWeight: "600" }} onPress={() => navigation.navigate("terms" as never)}>
                       Terms of Service
                     </Text>
                   </Text>

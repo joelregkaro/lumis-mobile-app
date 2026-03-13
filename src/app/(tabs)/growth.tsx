@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, RefreshControl, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -175,7 +175,7 @@ const MILESTONES = [
 ];
 
 export default function GrowthScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { recentMoods, fetchRecentMoods } = useMoodStore();
   const { patterns, fetchPatterns, wrappedCards, fetchWrapped } = useMemoryStore();
   const { goals, completedGoals, milestones, fetchGoals, fetchCompletedGoals, updateStatus } = useGoalStore();
@@ -286,7 +286,7 @@ export default function GrowthScreen() {
 
         {/* HERO: Human Score */}
         <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 20 }}>
-          <Pressable onPress={() => router.push("/human-score")}>
+          <Pressable onPress={() => navigation.navigate("human-score" as never)}>
             <LinearGradient
               colors={[`${c.brand.purple}25`, `${c.brand.teal}10`, c.bg.surface]}
               start={{ x: 0, y: 0 }}
@@ -351,7 +351,7 @@ export default function GrowthScreen() {
         {/* Self-Discovery Section */}
         <Animated.View entering={FadeInDown.duration(400)} style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
           <Pressable
-            onPress={() => { hapticLight(); router.push("/emotional-type"); }}
+            onPress={() => { hapticLight(); navigation.navigate("emotional-type" as never); }}
             style={{ flex: 1, backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: c.bg.border }}
           >
             <Text style={{ fontSize: 24, marginBottom: 8 }}>🔮</Text>
@@ -361,7 +361,7 @@ export default function GrowthScreen() {
             <Text style={{ fontSize: 12, color: c.text.tertiary, marginTop: 2 }}>Discover your archetype</Text>
           </Pressable>
           <Pressable
-            onPress={() => { hapticLight(); router.push("/life-wheel"); }}
+            onPress={() => { hapticLight(); navigation.navigate("life-wheel" as never); }}
             style={{ flex: 1, backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: c.bg.border }}
           >
             <Text style={{ fontSize: 24, marginBottom: 8 }}>🎯</Text>
@@ -400,7 +400,7 @@ export default function GrowthScreen() {
         {/* Monthly Wrapped — Prominent CTA */}
         {wrappedCards.length > 0 && (
           <Animated.View entering={FadeInDown.duration(400)} style={{ marginBottom: 20 }}>
-            <Pressable onPress={() => { hapticLight(); router.push("/wrapped"); }}>
+            <Pressable onPress={() => { hapticLight(); navigation.navigate("wrapped" as never); }}>
               <LinearGradient
                 colors={["#7C3AED", "#2DD4BF"]}
                 start={{ x: 0, y: 0 }}

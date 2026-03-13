@@ -11,12 +11,12 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -57,7 +57,7 @@ export default function ForgotPasswordScreen() {
                   <Text className="text-brand-purple-light">{email}</Text>
                 </Text>
                 <Pressable
-                  onPress={() => router.back()}
+                  onPress={() => navigation.goBack()}
                   className="mt-xl items-center rounded-lg bg-brand-purple px-8 py-4"
                 >
                   <Text className="text-body font-inter-semibold text-white">
@@ -101,7 +101,7 @@ export default function ForgotPasswordScreen() {
                   </Pressable>
 
                   <Pressable
-                    onPress={() => router.back()}
+                    onPress={() => navigation.goBack()}
                     className="items-center py-md"
                   >
                     <Text className="text-body text-text-secondary">

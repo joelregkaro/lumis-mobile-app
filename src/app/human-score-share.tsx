@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
@@ -71,7 +71,7 @@ function AttributeBar({ label, value, color, maxWidth }: { label: string; value:
 }
 
 export default function HumanScoreShareScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const viewRef = useRef<ViewShot>(null);
   const [sharing, setSharing] = useState(false);
   const { latestScore, level, archetype } = useHumanScoreStore();
@@ -111,7 +111,7 @@ export default function HumanScoreShareScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0C1120" }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
+        <Pressable onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="close" size={24} color="#8B92A8" />
         </Pressable>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", color: "#EAEDF3" }}>

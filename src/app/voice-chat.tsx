@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
@@ -44,7 +44,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function VoiceChatScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const flatListRef = useRef<FlatList<VoiceTranscriptMessage>>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isEnding, setIsEnding] = useState(false);
@@ -377,10 +377,17 @@ export default function VoiceChatScreen() {
     // Navigate away immediately for responsive UX
     killAudio();
     try {
-      router.navigate("/(tabs)/home");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Tabs" as never, params: { screen: "home" } }],
+      });
     } catch {
-      try { router.dismissAll(); } catch {}
-      try { router.replace("/(tabs)/home"); } catch { router.replace("/"); }
+      try {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Tabs" as never, params: { screen: "home" } }],
+        });
+      } catch {}
     }
 
     // Save transcript via direct PostgREST writes, then disconnect audio
@@ -437,7 +444,7 @@ export default function VoiceChatScreen() {
       useStreakStore.getState().updateStreak();
       useVoiceChatStore.getState().reset();
     }
-  }, [isEnding, disconnect, killAudio, router]);
+  }, [isEnding, disconnect, killAudio, navigation]);
 
   const confirmEndSession = useCallback(() => {
     hapticLight();
@@ -703,7 +710,7 @@ export default function VoiceChatScreen() {
         <Pressable
           onPress={() => {
             hapticLight();
-            router.push("/sos");
+            navigation.navigate("sos" as never);
           }}
           style={{
             width: 56,

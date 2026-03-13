@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -20,18 +20,18 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { offerings, isPro, isLoading, purchase, restore, fetchOfferings } = useSubscriptionStore();
   const [plan, setPlan] = useState<"annual" | "monthly">("annual");
 
   const dismiss = useCallback(() => {
     track("paywall_dismissed");
-    if (router.canGoBack()) {
-      router.back();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
     } else {
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     }
-  }, [router]);
+  }, [navigation]);
 
   useEffect(() => {
     if (isPro) {

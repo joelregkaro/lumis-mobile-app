@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
@@ -84,7 +84,7 @@ function DigestCard({ card }: { card: InsightCard }) {
 }
 
 export default function JournalScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,11 +137,8 @@ export default function JournalScreen() {
   const startJournalMode = useCallback(() => {
     hapticLight();
     track("journal_mode_started");
-    router.push({
-      pathname: "/(tabs)/chat",
-      params: { journalMode: "true" },
-    });
-  }, [router]);
+    navigation.navigate("Tabs" as never, { screen: "chat", params: { journalMode: "true" } });
+  }, [navigation]);
 
   const showingSearch = searchVisible && searchQuery.trim().length > 0;
 

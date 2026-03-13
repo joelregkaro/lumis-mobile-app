@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { RootStackParamList } from "@/navigation/types";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useEchoStore } from "@/store/echo";
@@ -31,8 +32,9 @@ const RESCHEDULE_OPTIONS = [
 ];
 
 export default function CommitmentResponseScreen() {
-  const router = useRouter();
-  const { echoId } = useLocalSearchParams<{ echoId: string }>();
+  const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, "commitment-response">>();
+  const echoId = route.params?.echoId;
   const { pendingEchoes, fetchPendingEchoes, respondToCommitment } = useEchoStore();
   const { createHabit } = useHabitStore();
   const [echo, setEcho] = useState<SessionEcho | null>(null);
@@ -83,7 +85,7 @@ export default function CommitmentResponseScreen() {
     await respondToCommitment(echo.id, "rescheduled", note.trim() || null, newDate.toISOString());
     await hapticSuccess();
     setSaving(false);
-    router.replace("/(tabs)/home");
+    navigation.navigate("Tabs", { screen: "home" });
   };
 
   const handleCreateHabit = async () => {
@@ -184,14 +186,14 @@ export default function CommitmentResponseScreen() {
 
           <View style={{ flexDirection: "row", gap: 12, marginTop: 28 }}>
             <Pressable
-              onPress={() => router.replace("/(tabs)/home")}
+              onPress={() => navigation.navigate("Tabs", { screen: "home" })}
               style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#1E1E27", borderRadius: 12 }}
             >
               <Text style={{ fontSize: 14, color: "#A1A1AA", fontWeight: "500" }}>Done</Text>
             </Pressable>
             {!isDone && (
               <Pressable
-                onPress={() => router.replace("/(tabs)/chat")}
+                onPress={() => navigation.navigate("Tabs", { screen: "chat" })}
                 style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "#8B5CF6", borderRadius: 12 }}
               >
                 <Text style={{ fontSize: 14, color: "white", fontWeight: "600" }}>Let's talk</Text>
@@ -216,7 +218,7 @@ export default function CommitmentResponseScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg-primary" edges={["top", "bottom"]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => router.back()} hitSlop={16}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={16}>
           <Ionicons name="close" size={24} color="#A1A1AA" />
         </Pressable>
         <Text style={{ fontSize: 16, fontWeight: "600", color: "#F4F4F5" }}>How'd it go?</Text>

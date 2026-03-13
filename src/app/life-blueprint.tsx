@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, {
   FadeIn, FadeInDown, FadeInUp,
   SlideInRight, SlideOutLeft,
@@ -123,7 +123,7 @@ const INITIAL_DOMAINS: DomainRating[] = [
 type Phase = "quiz" | "loading" | "result";
 
 export default function LifeBlueprintScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { session } = useAuthStore();
   useEffect(() => { screen("life_blueprint"); }, []);
 
@@ -177,9 +177,9 @@ export default function LifeBlueprintScreen() {
 
   const handleStartJourney = useCallback(() => {
     if (session) {
-      router.replace("/(tabs)/home");
+      navigation.reset({ index: 0, routes: [{ name: "Tabs" as never, params: { screen: "home" } }] });
     } else {
-      router.push("/(auth)/sign-up");
+      navigation.navigate("Auth" as never, { screen: "sign-up" });
     }
   }, [session, router]);
 
@@ -196,7 +196,7 @@ export default function LifeBlueprintScreen() {
     if (currentQ > 0) {
       setCurrentQ((prev) => prev - 1);
     } else {
-      router.back();
+      navigation.goBack();
     }
   }, [currentQ, router]);
 

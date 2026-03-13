@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, withDelay } from "react-native-reanimated";
 import ShareableCard from "@/components/share/ShareableCard";
@@ -49,7 +49,7 @@ function TraitBar({ label, color, value, delay }: { label: string; color: string
 }
 
 export default function EmotionalTypeScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [typeData, setTypeData] = useState<EmotionalType | null>(null);
@@ -110,7 +110,7 @@ export default function EmotionalTypeScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#0C1120" }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} color="#71717A" />
           </Pressable>
           <Text style={{ fontSize: 16, fontWeight: "600", color: "#F4F4F5" }}>Your Emotional Type</Text>
@@ -150,7 +150,7 @@ export default function EmotionalTypeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0C1120" }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#71717A" />
         </Pressable>
         <Text style={{ fontSize: 16, fontWeight: "600", color: "#F4F4F5" }}>Your Emotional Type</Text>
@@ -189,7 +189,7 @@ export default function EmotionalTypeScreen() {
 
       <View style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
           style={{ alignItems: "center", backgroundColor: "#16161D", borderRadius: 16, paddingVertical: 14 }}
         >
           <Text style={{ fontSize: 16, fontWeight: "600", color: "#A78BFA" }}>Done</Text>

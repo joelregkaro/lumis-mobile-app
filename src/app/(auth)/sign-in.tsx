@@ -11,14 +11,14 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useAuthStore } from "@/store/auth";
 
 export default function SignInScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { signInWithEmail, signInWithApple, signInWithGoogle } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,7 +41,7 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signInWithEmail(email, password);
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       Alert.alert("Sign in failed", err?.message ?? "Please try again.");
     } finally {
@@ -53,7 +53,7 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signInWithApple();
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       if (err?.code !== "ERR_REQUEST_CANCELED") {
         Alert.alert("Apple Sign In failed", err?.message ?? "Please try again.");
@@ -67,7 +67,7 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       Alert.alert("Google Sign In failed", err?.message ?? "Please try again.");
     } finally {
@@ -191,14 +191,14 @@ export default function SignInScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => router.push("/(auth)/forgot-password")}
+                  onPress={() => navigation.navigate("forgot-password" as never)}
                   className="items-center py-xs"
                 >
                   <Text className="text-body text-text-secondary">Forgot password?</Text>
                 </Pressable>
 
                 <Pressable
-                  onPress={() => router.push("/(auth)/sign-up")}
+                  onPress={() => navigation.navigate("sign-up" as never)}
                   className="items-center py-md"
                 >
                   <Text className="text-body text-text-secondary">

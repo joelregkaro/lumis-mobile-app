@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useDailyCheckinStore } from "@/store/dailyCheckin";
@@ -25,6 +25,7 @@ const RATINGS = [
 ];
 
 export default function EveningReflectionScreen() {
+  const navigation = useNavigation();
   const { todaysCheckin, setEveningReflection, fetchToday } = useDailyCheckinStore();
 
   useEffect(() => { screen("evening_reflection"); }, []);
@@ -55,8 +56,8 @@ export default function EveningReflectionScreen() {
     await setEveningReflection(reflection, intentionDone, wins, rating);
     await fetchToday();
     setSaving(false);
-    router.back();
-  }, [reflection, intentionDone, wins, rating]);
+    navigation.goBack();
+  }, [reflection, intentionDone, wins, rating, setEveningReflection, fetchToday, navigation]);
 
   return (
     <LinearGradient colors={["#0B0F1A", "#111827", "#0B0F1A"]} style={{ flex: 1 }}>
@@ -71,7 +72,7 @@ export default function EveningReflectionScreen() {
           >
             {/* Header */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-              <Pressable onPress={() => router.back()}>
+              <Pressable onPress={() => navigation.goBack()}>
                 <Text style={{ color: "#5A6178", fontSize: 16 }}>Cancel</Text>
               </Pressable>
               <Text style={{ color: "#EAEDF3", fontSize: 18, fontWeight: "700" }}>

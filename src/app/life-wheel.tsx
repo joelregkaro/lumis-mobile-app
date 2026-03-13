@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useLifeDomainsStore, DOMAIN_META, ALL_DOMAINS } from "@/store/lifeDomains";
@@ -10,7 +10,7 @@ import { screen, track } from "@/lib/analytics";
 import type { LifeDomainType } from "@/types/database";
 
 export default function LifeWheelScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { latestScores, isLoading, fetchLatestScores, saveAssessment } = useLifeDomainsStore();
   const [editing, setEditing] = useState(false);
   const [scores, setScores] = useState<Record<LifeDomainType, number>>(
@@ -56,7 +56,7 @@ export default function LifeWheelScreen() {
   return (
     <SafeAreaView className="flex-1 bg-bg-primary" edges={["top", "bottom"]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => router.back()} hitSlop={16}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={16}>
           <Ionicons name="chevron-back" size={24} color="#A1A1AA" />
         </Pressable>
         <Text style={{ fontSize: 18, fontWeight: "700", color: "#F4F4F5" }}>Life Wheel</Text>

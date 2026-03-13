@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Switch, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   FadeInDown,
@@ -281,7 +281,7 @@ function XpBreakdown({ score }: { score: HumanScore }) {
 }
 
 export default function HumanScoreScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const {
     latestScore, previousScore, totalXp, level, archetype, leagueOptedIn,
     leagueStanding, leaguePeers, isLoading,
@@ -355,13 +355,13 @@ export default function HumanScoreScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0C1120" }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12 }}>
-        <Pressable onPress={() => router.back()} style={{ padding: 8 }}>
+        <Pressable onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="close" size={24} color="#8B92A8" />
         </Pressable>
         <Text style={{ flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", color: "#EAEDF3" }}>
           Human Score
         </Text>
-        <Pressable onPress={() => router.push("/human-score-share")} style={{ padding: 8 }}>
+        <Pressable onPress={() => navigation.navigate("human-score-share" as never)} style={{ padding: 8 }}>
           <Ionicons name="share-outline" size={22} color="#8B92A8" />
         </Pressable>
       </View>
@@ -566,7 +566,14 @@ export default function HumanScoreScreen() {
 
                         {tipForAttr && (
                           <Pressable
-                            onPress={() => router.push(tipForAttr.action as any)}
+                            onPress={() => {
+                              const a = tipForAttr.action as string;
+                              if (a.startsWith("/(tabs)/")) {
+                                navigation.navigate("Tabs" as never, { screen: a.replace("/(tabs)/", "") as "home" | "chat" | "journal" | "growth" | "me" });
+                              } else {
+                                navigation.navigate(a.replace(/^\//, "") as never);
+                              }
+                            }}
                             style={{
                               flexDirection: "row",
                               alignItems: "center",

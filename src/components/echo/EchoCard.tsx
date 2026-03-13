@@ -1,5 +1,5 @@
 import { View, Text, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeOutRight } from "react-native-reanimated";
 import { hapticSuccess, hapticLight } from "@/lib/haptics";
@@ -13,7 +13,7 @@ interface EchoCardProps {
 }
 
 export default function EchoCard({ echo, index, onComplete, onSkip }: EchoCardProps) {
-  const router = useRouter();
+  const navigation = useNavigation();
   const isCommitment = !!echo.committed_for;
 
   const handleComplete = async () => {
@@ -28,7 +28,7 @@ export default function EchoCard({ echo, index, onComplete, onSkip }: EchoCardPr
 
   const handleCommitmentTap = async () => {
     await hapticLight();
-    router.push({ pathname: "/commitment-response", params: { echoId: echo.id } });
+    navigation.navigate("commitment-response" as never, { echoId: echo.id });
   };
 
   return (

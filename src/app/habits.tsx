@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { useHabitStore } from "@/store/habits";
@@ -122,7 +122,7 @@ function PhaseProgress({ habit, phase }: { habit: Habit; phase: HabitPhase }) {
 }
 
 export default function HabitsScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const {
     habits, fetchHabits, fetchTodayCompletions, fetchHabitHistory,
     completeToday, uncompleteToday, isCompletedToday, todaysHabits,
@@ -402,7 +402,7 @@ export default function HabitsScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 12, marginBottom: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Pressable onPress={() => router.back()} style={{ marginRight: 12 }}>
+            <Pressable onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
               <Ionicons name="arrow-back" size={24} color="#EAEDF3" />
             </Pressable>
             <Text style={{ fontSize: 24, fontWeight: "700", color: "#EAEDF3" }}>Habits</Text>

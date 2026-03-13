@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, Linking, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -179,7 +179,7 @@ const AFFIRMATIONS = [
 ];
 
 function PresenceExercise({ onBack }: { onBack: () => void }) {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [affirmationIdx, setAffirmationIdx] = useState(0);
 
   useEffect(() => {
@@ -206,8 +206,8 @@ function PresenceExercise({ onBack }: { onBack: () => void }) {
       <View className="mt-xl w-full">
         <Pressable
           onPress={() => {
-            router.back();
-            setTimeout(() => router.push("/(tabs)/chat"), 100);
+            navigation.goBack();
+            setTimeout(() => navigation.navigate("Tabs" as never, { screen: "chat" }), 100);
           }}
           className="mb-md items-center rounded-lg bg-brand-purple/20 py-4"
         >
@@ -249,7 +249,7 @@ function CrisisFooter() {
 }
 
 export default function SOSScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [selectedMode, setSelectedMode] = useState<SOSMode | null>(null);
 
   useEffect(() => { screen("sos"); }, []);
@@ -306,7 +306,7 @@ export default function SOSScreen() {
             </Text>
           </Pressable>
 
-          <Pressable onPress={() => router.back()} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
+          <Pressable onPress={() => navigation.goBack()} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
             <Text className="text-body text-text-tertiary">← Go back</Text>
           </Pressable>
         </Animated.View>
@@ -349,7 +349,7 @@ export default function SOSScreen() {
           <Pressable onPress={() => setSelectedMode(null)} className="mb-md items-center">
             <Text className="text-body text-text-secondary">Try something else</Text>
           </Pressable>
-          <Pressable onPress={() => router.back()} className="items-center" style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
+          <Pressable onPress={() => navigation.goBack()} className="items-center" style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
             <Text className="text-body text-text-tertiary">← Close</Text>
           </Pressable>
         </View>

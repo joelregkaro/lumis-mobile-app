@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   FadeIn,
@@ -422,7 +422,7 @@ function DetailCard({ rel }: { rel: Relationship }) {
 }
 
 export default function RelationshipsScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -587,7 +587,7 @@ export default function RelationshipsScreen() {
           relationship constellation.
         </Text>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
           style={{
             marginTop: 28,
             backgroundColor: "#7C3AED20",
@@ -618,7 +618,7 @@ export default function RelationshipsScreen() {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityLabel="Go back"
           accessibilityRole="button"

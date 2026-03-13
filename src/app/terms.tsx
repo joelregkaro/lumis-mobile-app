@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 const EFFECTIVE_DATE = "March 1, 2026";
@@ -23,12 +23,12 @@ function BulletItem({ children }: { children: React.ReactNode }) {
 }
 
 export default function TermsOfServiceScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color="#EAEDF3" />
         </Pressable>
         <Text style={styles.headerTitle}>Terms of Service</Text>

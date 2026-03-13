@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, TextInput } from "react-native";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useAuthStore } from "@/store/auth";
@@ -21,7 +21,7 @@ const MOOD_OPTIONS = [
 type Step = "mood" | "context" | "ready";
 
 export default function WarmUpScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const profile = useAuthStore((s) => s.profile);
   const { memoryDoc, fetchMemoryDoc } = useMemoryStore();
   const { pendingEchoes, fetchPendingEchoes } = useEchoStore();
@@ -57,10 +57,9 @@ export default function WarmUpScreen() {
 
   const handleStartSession = async () => {
     await hapticSuccess();
-    router.back();
+    navigation.goBack();
     setTimeout(() => {
-      const params = topicText.trim() ? `?topic=${encodeURIComponent(topicText.trim())}` : "";
-      router.push(`/(tabs)/chat${params}` as any);
+      navigation.navigate("Tabs" as never, { screen: "chat", params: topicText.trim() ? { topic: topicText.trim() } : undefined });
     }, 100);
   };
 
@@ -210,7 +209,7 @@ export default function WarmUpScreen() {
               </Text>
             </Pressable>
 
-            <Pressable onPress={() => router.back()} className="mt-md items-center">
+            <Pressable onPress={() => navigation.goBack()} className="mt-md items-center">
               <Text className="text-body text-text-tertiary">Not right now</Text>
             </Pressable>
           </Animated.View>

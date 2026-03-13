@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { View, Text, Pressable, ScrollView, RefreshControl, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
@@ -107,7 +107,7 @@ function getCompanionMessage(opts: {
 }
 
 export default function HomeScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const profile = useAuthStore((s) => s.profile);
   const todaysMood = useMoodStore((s) => s.todaysMood);
   const fetchTodaysMood = useMoodStore((s) => s.fetchTodaysMood);
@@ -277,7 +277,7 @@ export default function HomeScreen() {
             {greeting}
           </Text>
           <Pressable
-            onPress={() => router.push("/(tabs)/me")}
+            onPress={() => navigation.navigate("me" as never)}
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.bg.surface, alignItems: "center", justifyContent: "center" }}
             accessibilityLabel="Settings"
           >
@@ -292,8 +292,8 @@ export default function HomeScreen() {
           companionExpression={companionExpression}
           companionTier={companionTier}
           isPro={isPro}
-          onChat={async () => { await hapticLight(); router.push("/(tabs)/chat"); }}
-          onVoice={async () => { await hapticLight(); router.push(isPro ? "/voice-chat" : "/paywall"); }}
+          onChat={async () => { await hapticLight(); navigation.navigate("chat" as never); }}
+          onVoice={async () => { await hapticLight(); navigation.navigate((isPro ? "voice-chat" : "paywall") as never); }}
         />
 
         {/* Celebration overlay */}
@@ -356,7 +356,7 @@ export default function HomeScreen() {
               </View>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 <Pressable
-                  onPress={() => { router.push("/life-blueprint"); }}
+                  onPress={() => { navigation.navigate("life-blueprint" as never); }}
                   style={{ flex: 1, backgroundColor: c.brand.purple, borderRadius: 10, paddingVertical: 10, alignItems: "center" }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "600", color: "white" }}>View & Share</Text>
@@ -386,7 +386,7 @@ export default function HomeScreen() {
           onHabitUncomplete={async (id) => { await uncompleteToday(id); await hapticLight(); }}
           onHabitLongPress={handleHabitLongPress}
           onAddHabit={() => setShowAddHabit(true)}
-          onViewAllHabits={() => router.push("/habits")}
+          onViewAllHabits={() => navigation.navigate("habits" as never)}
         />
 
         {/* Session Recap Card */}
@@ -465,14 +465,14 @@ export default function HomeScreen() {
           archetype={archetype}
           level={level}
           moodTrend={moodTrend}
-          onHumanScore={() => router.push("/human-score")}
-          onGrowth={() => router.push("/(tabs)/growth")}
+          onHumanScore={() => navigation.navigate("human-score" as never)}
+          onGrowth={() => navigation.navigate("growth" as never)}
         />
 
         {/* Weekly Insight Card Banner */}
         {weeklyInsightCards.length > 0 && (
           <Animated.View entering={FadeInDown.delay(250).duration(400)} style={{ marginBottom: 24 }}>
-            <Pressable onPress={() => router.push("/(tabs)/growth")}>
+            <Pressable onPress={() => navigation.navigate("growth" as never)}>
               <LinearGradient
                 colors={[c.gradient.start, c.gradient.end]}
                 start={{ x: 0, y: 0 }}
@@ -511,7 +511,7 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 15, color: c.text.primary, lineHeight: 22 }}>
                 {latestInsight.description}
               </Text>
-              <Pressable onPress={() => router.push("/(tabs)/growth")} style={{ alignSelf: "flex-end", marginTop: 8 }}>
+              <Pressable onPress={() => navigation.navigate("growth" as never)} style={{ alignSelf: "flex-end", marginTop: 8 }}>
                 <Text style={{ fontSize: 14, color: c.brand.purpleLight, fontWeight: "500" }}>See all insights →</Text>
               </Pressable>
             </View>
@@ -522,7 +522,7 @@ export default function HomeScreen() {
         {activeGoals.length > 0 && (
           <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable
-              onPress={() => router.push("/(tabs)/growth")}
+              onPress={() => navigation.navigate("growth" as never)}
               style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.brand.purple }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
@@ -550,7 +550,7 @@ export default function HomeScreen() {
         {new Date().getHours() >= 18 && !todaysCheckin?.day_rating && (
           <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable
-              onPress={async () => { await hapticLight(); router.push("/evening-reflection"); }}
+              onPress={async () => { await hapticLight(); navigation.navigate("evening-reflection" as never); }}
               style={{
                 backgroundColor: c.bg.surface,
                 borderRadius: 16,
@@ -575,8 +575,8 @@ export default function HomeScreen() {
 
         {/* Quick Actions */}
         <QuickActionsRow
-          onBreathe={() => router.push("/sos")}
-          onWindDown={() => router.push("/wind-down")}
+          onBreathe={() => navigation.navigate("sos" as never)}
+          onWindDown={() => navigation.navigate("wind-down" as never)}
         />
       </ScrollView>
 

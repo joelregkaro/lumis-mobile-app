@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Markdown from "react-native-markdown-display";
 import { Paths, File as ExpoFile } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Share } from "react-native";
 import { useAuthStore } from "@/store/auth";
 import { useMemoryStore } from "@/store/memory";
@@ -178,7 +178,7 @@ function SettingsRow({ icon, label, onPress, destructive, loading: rowLoading, r
 }
 
 export default function MeScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { profile, signOut, fetchProfile } = useAuthStore();
   const isPro = useSubscriptionStore((s) => s.isPro);
   const { memoryDoc, memories, fetchMemoryDoc, fetchMemories, updateMemory, deleteMemory } = useMemoryStore();
@@ -327,7 +327,7 @@ export default function MeScreen() {
 
         {/* Upgrade CTA Banner */}
         {!isPro && (
-          <Pressable onPress={() => router.push("/paywall")} style={{ marginHorizontal: 20, marginBottom: 20 }}>
+          <Pressable onPress={() => navigation.navigate("paywall" as never)} style={{ marginHorizontal: 20, marginBottom: 20 }}>
             <LinearGradient
               colors={["#7C3AED", "#0D9488"]}
               start={{ x: 0, y: 0 }}
@@ -628,17 +628,17 @@ export default function MeScreen() {
             <SettingsRow
               icon="pie-chart-outline"
               label="Life Wheel — Domain Assessment"
-              onPress={() => router.push("/life-wheel")}
+              onPress={() => navigation.navigate("life-wheel" as never)}
             />
             <SettingsRow
               icon="people-outline"
               label="My World — Relationship Map"
-              onPress={() => router.push("/relationships")}
+              onPress={() => navigation.navigate("relationships" as never)}
             />
             <SettingsRow
               icon="sparkles-outline"
               label="My Emotional Type"
-              onPress={() => router.push("/emotional-type")}
+              onPress={() => navigation.navigate("emotional-type" as never)}
             />
           </View>
 
@@ -649,15 +649,15 @@ export default function MeScreen() {
             <SettingsRow
               icon="card-outline"
               label="Subscription"
-              onPress={() => router.push("/paywall")}
+              onPress={() => navigation.navigate("paywall" as never)}
               rightElement={
                 <Text style={{ fontSize: 13, color: isPro ? "#22C55E" : "#A78BFA", fontWeight: "500" }}>
                   {isPro ? "Growth" : "Free"}
                 </Text>
               }
             />
-            <SettingsRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => router.push("/privacy")} />
-            <SettingsRow icon="document-text-outline" label="Terms of Service" onPress={() => router.push("/terms")} />
+            <SettingsRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => navigation.navigate("privacy" as never)} />
+            <SettingsRow icon="document-text-outline" label="Terms of Service" onPress={() => navigation.navigate("terms" as never)} />
             <SettingsRow icon="download-outline" label="Export My Data" onPress={handleExportData} loading={isExporting} />
             <SettingsRow icon="log-out-outline" label="Sign Out" onPress={handleSignOut} destructive />
           </View>

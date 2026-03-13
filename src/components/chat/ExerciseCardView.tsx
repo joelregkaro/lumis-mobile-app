@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { hapticLight } from "@/lib/haptics";
 import type { ExerciseCard } from "@/types/chat";
 
@@ -17,14 +17,14 @@ interface Props {
 }
 
 export default function ExerciseCardView({ card }: Props) {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [expanded, setExpanded] = useState(false);
   const config = TYPE_CONFIG[card.type];
 
   const handleTryIt = async () => {
     await hapticLight();
     if (card.type === "breathing" || card.type === "grounding") {
-      router.push("/sos");
+      navigation.navigate("sos" as never);
     }
   };
 

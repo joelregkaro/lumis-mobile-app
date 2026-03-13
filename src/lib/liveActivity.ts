@@ -1,8 +1,8 @@
 export type VoiceSessionActivityProps = {
   companionName: string;
-  elapsed: number;
-  isMuted: boolean;
-  isListening: boolean;
+  sessionNumber: number;
+  elapsedSeconds: number;
+  status: "connecting" | "listening" | "speaking";
 };
 
 export type DailyProgressActivityProps = {

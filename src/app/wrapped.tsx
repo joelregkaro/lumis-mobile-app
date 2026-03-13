@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, Pressable, Dimensions, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -199,7 +199,7 @@ function StoryCard({
 }
 
 export default function WrappedScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { markShared } = useMemoryStore();
   const [cards, setCards] = useState<InsightCard[]>([]);
   const [companionName, setCompanionName] = useState("Lumis");
@@ -293,7 +293,7 @@ export default function WrappedScreen() {
         <Text style={{ fontSize: 15, color: c.text.secondary, textAlign: "center", marginTop: 8 }}>
           Keep checking in and having conversations. Your first Monthly Wrapped will be ready soon.
         </Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 24 }}>
+        <Pressable onPress={() => navigation.goBack()} style={{ marginTop: 24 }}>
           <Text style={{ fontSize: 16, color: c.brand.purpleLight, fontWeight: "600" }}>Go back</Text>
         </Pressable>
       </SafeAreaView>
@@ -313,7 +313,7 @@ export default function WrappedScreen() {
         </View>
         {/* Close button */}
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
           style={{ position: "absolute", right: 16, top: 56, zIndex: 20, padding: 4 }}
         >
           <Ionicons name="close" size={24} color="rgba(255,255,255,0.7)" />
@@ -361,7 +361,7 @@ export default function WrappedScreen() {
               </LinearGradient>
             </Pressable>
             <Pressable
-              onPress={() => { hapticLight(); router.back(); }}
+              onPress={() => { hapticLight(); navigation.goBack(); }}
               style={{ alignItems: "center", paddingVertical: 12 }}
             >
               <Text style={{ fontSize: 15, fontWeight: "600", color: "rgba(255,255,255,0.6)" }}>Done</Text>

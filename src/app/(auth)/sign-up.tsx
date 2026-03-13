@@ -11,14 +11,14 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import CompanionAvatar from "@/components/companion/CompanionAvatar";
 import { useAuthStore } from "@/store/auth";
 
 export default function SignUpScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { signUpWithEmail, signInWithApple, signInWithGoogle } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +45,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await signUpWithEmail(email, password);
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       Alert.alert("Sign up failed", err?.message ?? "Please try again.");
     } finally {
@@ -57,7 +57,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await signInWithApple();
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       if (err?.code !== "ERR_REQUEST_CANCELED") {
         Alert.alert("Apple Sign In failed", err?.message ?? "Please try again.");
@@ -71,7 +71,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      router.replace("/");
+      navigation.reset({ index: 0, routes: [{ name: "Index" as never }] });
     } catch (err: any) {
       Alert.alert("Google Sign In failed", err?.message ?? "Please try again.");
     } finally {
@@ -195,7 +195,7 @@ export default function SignUpScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => router.back()}
+                  onPress={() => navigation.goBack()}
                   className="items-center py-md"
                 >
                   <Text className="text-body text-text-secondary">

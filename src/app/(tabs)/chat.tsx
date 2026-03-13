@@ -9,7 +9,8 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { TabsParamList } from "@/navigation/types";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from "react-native-reanimated";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -40,8 +41,9 @@ function getTimeGreeting(): string {
 }
 
 export default function ChatScreen() {
-  const router = useRouter();
-  const { topic, journalMode } = useLocalSearchParams<{ topic?: string; journalMode?: string }>();
+  const navigation = useNavigation();
+  const route = useRoute<RouteProp<TabsParamList, "chat">>();
+  const { topic, journalMode } = route.params ?? {};
   const isJournalMode = journalMode === "true";
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const [inputText, setInputText] = useState(topic ? decodeURIComponent(topic) : "");
@@ -227,7 +229,7 @@ export default function ChatScreen() {
         <Pressable
           onPress={() => {
             track("sos_opened", { source: "chat" });
-            router.push("/sos");
+            navigation.navigate("sos" as never);
           }}
           style={{
             width: 36,
@@ -364,7 +366,7 @@ export default function ChatScreen() {
               <Pressable
                 onPress={async () => {
                   await hapticLight();
-                  router.push(isPro ? "/voice-chat" : "/paywall");
+                  navigation.navigate((isPro ? "voice-chat" : "paywall") as never);
                 }}
                 style={{
                   width: 36,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, TextInput, ScrollView, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -101,7 +101,7 @@ function SleepBreathingLabel() {
 }
 
 export default function WindDownScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const profile = useAuthStore((s) => s.profile);
   const logMood = useMoodStore((s) => s.logMood);
   const [mode, setMode] = useState<WindDownMode | null>(null);
@@ -188,8 +188,8 @@ export default function WindDownScreen() {
 
           <Pressable
             onPress={() => {
-              router.back();
-              setTimeout(() => router.push("/(tabs)/chat"), 100);
+              navigation.goBack();
+              setTimeout(() => navigation.navigate("Tabs" as never, { screen: "chat" }), 100);
             }}
             className="mb-xl rounded-lg border border-bg-elevated bg-bg-surface p-lg"
           >
@@ -201,7 +201,7 @@ export default function WindDownScreen() {
             </Text>
           </Pressable>
 
-          <Pressable onPress={() => router.back()} className="items-center">
+          <Pressable onPress={() => navigation.goBack()} className="items-center">
             <Text className="text-body text-text-tertiary">← Not tonight</Text>
           </Pressable>
         </Animated.View>
@@ -249,7 +249,7 @@ export default function WindDownScreen() {
                 <Text className="mt-sm text-center text-body text-text-secondary">
                   Gratitude practice builds resilience over time.{"\n"}Sweet dreams.
                 </Text>
-                <Pressable onPress={() => router.back()} className="mt-lg">
+                <Pressable onPress={() => navigation.goBack()} className="mt-lg">
                   <Text className="text-body text-brand-teal">Close</Text>
                 </Pressable>
               </Animated.View>
@@ -318,7 +318,7 @@ export default function WindDownScreen() {
               <Text className="mt-sm text-center text-body text-text-secondary">
                 Tomorrow is a new opportunity.{"\n"}Rest well.
               </Text>
-              <Pressable onPress={() => router.back()} className="mt-lg">
+              <Pressable onPress={() => navigation.goBack()} className="mt-lg">
                 <Text className="text-body text-brand-teal">Close</Text>
               </Pressable>
             </Animated.View>
