@@ -195,25 +195,26 @@ mat2 rot(float a) {
   return mat2(c, -s, s, c);
 }
 
-// Egg SDF: width varies with height. Narrow top, wide bottom.
 float eggSDF(vec2 p) {
-  // Vertical extent: top at y=-0.28, bottom at y=+0.24
-  float ny = (p.y + 0.02) / 0.26;  // normalized -1..+1 ish
-  // Width profile: narrower at top, wider at bottom
-  float w = 0.18 + 0.04 * ny - 0.015 * ny * ny;
-  // Elliptical distance
-  float dx = p.x / w;
-  float dy = p.y / 0.26;
-  return length(vec2(dx, dy)) - 1.0;
+  // Plump egg: narrow top, wide bottom
+  float t = clamp((p.y + 0.02) / 0.46 + 0.5, 0.0, 1.0);
+  float w = mix(0.15, 0.25, t) - 0.035 * t * t;
+  return length(vec2(p.x / max(w, 0.01), p.y / 0.27)) - 1.0;
 }
 
-float dropSDF(vec2 uv) {
+vec2 poseSpace(vec2 uv) {
   vec2 p = rot(-iTilt) * uv;
   p.x -= p.y * iLeanX;
   p.x /= iStretchX;
   p.y /= iStretchY;
   p.x += iShellBias * 0.3;
-  return eggSDF(p);
+  return p;
+}
+
+float fresnel(float d) {
+  // Active in a band near the edge -- wider for visible glass rim
+  float edge = smoothstep(-0.025, -0.004, d) * (1.0 - smoothstep(-0.003, 0.002, d));
+  return edge;
 }
 
 vec4 main(vec2 fc) {
@@ -221,120 +222,122 @@ vec4 main(vec2 fc) {
   float mn = min(res.x, res.y);
   vec2 uv = (fc - res * 0.5) / mn;
 
-  float d = dropSDF(uv);
+  vec2 p = poseSpace(uv);
+  float d = eggSDF(p);
 
-  // Soft outer halo -- very subtle purple glow
-  float halo = exp(-max(d, 0.0) * 28.0) * 0.10 * (0.8 + iGlow * 0.2);
-  vec3 haloCol = mix(vec3(0.22, 0.14, 0.48), vec3(0.36, 0.22, 0.56), smoothstep(-0.1, 0.15, uv.y));
+  // --- Ambient halo around the droplet ---
+  float haloStr = exp(-max(d, 0.0) * 18.0) * 0.16 * (0.7 + iGlow * 0.3);
+  vec3 haloCol = mix(vec3(0.28, 0.16, 0.56), vec3(0.42, 0.26, 0.64), smoothstep(-0.1, 0.2, p.y));
+  if (d > 0.10) return vec4(haloCol * haloStr, haloStr * 0.5);
 
-  if (d > 0.06) {
-    return vec4(haloCol * halo, halo * 0.4);
-  }
+  float outer = 1.0 - smoothstep(-0.004, 0.002, d);
+  if (outer < 0.001) return vec4(haloCol * haloStr, haloStr * 0.5);
 
-  // Outer edge mask (anti-aliased)
-  float outerMask = 1.0 - smoothstep(-0.003, 0.002, d);
-  // Inner edge for the glass rim (very thin, ~0.004 units = ~1-2px)
-  float innerMask = 1.0 - smoothstep(-0.002, 0.001, d + 0.004);
-  float rim = clamp(outerMask - innerMask, 0.0, 1.0);
+  // --- Fresnel-based rim lighting (the key to the glass look) ---
+  float fres = fresnel(d);
+  float topBias = smoothstep(0.05, -0.28, p.y);
+  float botBias = smoothstep(-0.04, 0.26, p.y);
+  float leftBias = smoothstep(0.02, -0.16, p.x);
 
-  // Pose space for interior effects
-  vec2 pp = rot(-iTilt) * uv;
-  pp.x -= pp.y * iLeanX;
-  pp.x /= iStretchX;
-  pp.y /= iStretchY;
+  // Rim colors: bright white/silver at crown, warm gold at bottom
+  vec3 rimSilver = vec3(0.92, 0.88, 1.0);
+  vec3 rimGold = vec3(1.0, 0.78, 0.32);
+  vec3 rimPurple = vec3(0.68, 0.52, 0.92);
+  vec3 rimCol = mix(rimPurple, rimSilver, topBias * 0.8 + leftBias * 0.3);
+  rimCol = mix(rimCol, rimGold, botBias * (0.55 + iWarm * 0.30));
 
-  // --- Rim color: cool lavender at top, warm amber at bottom ---
-  float topness = smoothstep(0.05, -0.24, pp.y);
-  float bottomness = smoothstep(-0.04, 0.22, pp.y);
-  vec3 rimCool = vec3(0.72, 0.66, 0.88);
-  vec3 rimWarm = vec3(0.82, 0.62, 0.26);
-  vec3 rimColor = mix(rimCool, rimWarm, bottomness * (0.30 + iWarm * 0.35));
-  float rimIntensity = 0.40 + topness * 0.25;
+  float negD = max(0.0, 0.0 - d);
+  float specMask = 1.0 - clamp(negD * 5.0, 0.0, 1.0);
 
-  // --- Dark glass body ---
+  float crownSpec = exp(0.0 - (pow((p.x + 0.04) * 5.5, 2.0) + pow((p.y + 0.24) * 11.0, 2.0)));
+  float crownBright = crownSpec * 5.0 * specMask;
+
+  // Left side specular: bright band running down the left edge of the egg
+  float leftSpec = exp(0.0 - pow((p.x + 0.13) * 9.0, 2.0) - pow(p.y * 1.6, 2.0)) * 1.4 * specMask;
+
+  // Bottom gold arc: wide, bright, the warm signature
+  float goldArc = exp(0.0 - (p.x * p.x * 4.5 + (p.y - 0.22) * (p.y - 0.22) * 22.0)) * 2.0 * specMask;
+
+  // Right side rim: present but subtler
+  float rightRim = exp(0.0 - pow((p.x - 0.13) * 12.0, 2.0) - pow(p.y * 2.2, 2.0)) * 0.45 * specMask;
+
+  // Continuous fresnel rim along the entire edge
+  float rimTotal = fres * 1.4 + crownBright + leftSpec + goldArc + rightRim;
+  vec3 rimLight = rimCol * rimTotal;
+  rimLight += rimSilver * crownBright * 1.0;
+  rimLight += rimGold * goldArc * 0.75;
+
+  // --- Dark glass interior (deep indigo, not pure black) ---
   vec3 body = mix(
-    vec3(0.04, 0.03, 0.10),
-    vec3(0.018, 0.012, 0.05),
-    smoothstep(-0.18, 0.14, pp.y)
+    vec3(0.06, 0.04, 0.14),
+    vec3(0.025, 0.018, 0.07),
+    smoothstep(-0.20, 0.12, p.y)
   );
 
-  // Subtle internal glow at center
-  float cg = exp(-(pp.x * pp.x * 18.0 + pp.y * pp.y * 14.0)) * 0.06;
-  body += vec3(0.08, 0.05, 0.18) * cg;
+  // Subtle purple depth in the center
+  float depth = exp(-(p.x * p.x * 10.0 + (p.y + 0.04) * (p.y + 0.04) * 7.0)) * 0.14;
+  body += vec3(0.14, 0.10, 0.28) * depth;
 
-  // Crown reflection near the top apex
-  float crown = exp(-(pp.x * pp.x * 28.0 + (pp.y + 0.22) * (pp.y + 0.22) * 80.0)) * 0.14;
-  body += vec3(0.32, 0.28, 0.55) * crown;
+  // Internal silver reflection band (upper area)
+  float refBand = exp(-(p.x * p.x * 8.0 + (p.y + 0.14) * (p.y + 0.14) * 45.0)) * 0.16;
+  body += vec3(0.34, 0.30, 0.55) * refBand;
 
-  // Warm amber accent at the lower belly
-  float warmZone = exp(-(pp.x * pp.x * 16.0 + (pp.y - 0.15) * (pp.y - 0.15) * 55.0));
-  body += vec3(0.16, 0.09, 0.02) * warmZone * (0.06 + iWarm * 0.12 + iEncourage * 0.08);
+  // Internal warm golden light (lower belly)
+  float warmInt = exp(-(p.x * p.x * 8.0 + (p.y - 0.10) * (p.y - 0.10) * 25.0));
+  body += vec3(0.24, 0.15, 0.04) * warmInt * (0.14 + iWarm * 0.18 + iEncourage * 0.12);
 
-  // Thinking: faint internal swirl
-  float tWave = sin(pp.y * 30.0 + pp.x * 12.0 + iTime * 2.0) * 0.5 + 0.5;
-  float tMask = exp(-(pp.x * pp.x * 22.0 + pp.y * pp.y * 14.0));
-  body += vec3(0.10, 0.06, 0.24) * tWave * tMask * iThink * 0.06;
+  // Thinking: subtle ripple
+  float tw = sin(p.y * 28.0 + p.x * 12.0 + iTime * 2.0) * 0.5 + 0.5;
+  float tm = exp(-(p.x * p.x * 18.0 + p.y * p.y * 10.0));
+  body += vec3(0.10, 0.06, 0.22) * tw * tm * iThink * 0.07;
 
-  // Listening: lean-side shadow
-  float lShadow = exp(-((pp.x + 0.03) * (pp.x + 0.03) * 35.0 + pp.y * pp.y * 12.0));
-  body *= 1.0 - iListen * lShadow * 0.12;
+  // Listening: shadow on lean side
+  float ls = exp(-((p.x + 0.04) * (p.x + 0.04) * 28.0 + p.y * p.y * 10.0));
+  body *= 1.0 - iListen * ls * 0.12;
 
-  // Encouraging: warm bloom from center
-  float eBloom = exp(-(pp.x * pp.x * 14.0 + (pp.y - 0.06) * (pp.y - 0.06) * 22.0));
-  body += vec3(0.18, 0.09, 0.02) * eBloom * iEncourage * 0.10;
+  // Encouraging: warm bloom
+  float eb = exp(-(p.x * p.x * 12.0 + (p.y - 0.04) * (p.y - 0.04) * 18.0));
+  body += vec3(0.18, 0.10, 0.02) * eb * iEncourage * 0.10;
 
-  // --- Visor (dark face cavity for the eyes) ---
-  float vTop = smoothstep(0.02, -0.14, pp.y);
-  float vBot = 1.0 - smoothstep(-0.10, 0.06, pp.y);
-  float vSide = 1.0 - smoothstep(0.08, 0.13, abs(pp.x));
-  float visor = clamp(vTop * vBot * vSide, 0.0, 1.0);
-  body = mix(body, vec3(0.006, 0.005, 0.020), visor * 0.90);
+  // --- Visor: dark face region ---
+  float vT = smoothstep(0.02, -0.16, p.y);
+  float vB = 1.0 - smoothstep(-0.12, 0.04, p.y);
+  float vS = 1.0 - smoothstep(0.08, 0.14, abs(p.x));
+  float visor = clamp(vT * vB * vS, 0.0, 1.0);
+  body = mix(body, vec3(0.008, 0.006, 0.024), visor * 0.88);
 
-  // --- Eyes: two distinct small slits ---
-  vec2 eyeL = vec2(-0.050 * iEyeSpread, -0.050);
-  vec2 eyeR = vec2( 0.050 * iEyeSpread, -0.050);
-  eyeL += vec2(-iTilt * 0.012, iListen * 0.006);
-  eyeR += vec2(-iTilt * 0.006, iListen * 0.006);
-
+  // --- Eyes: narrow almond slits ---
+  float esp = iEyeSpread;
+  vec2 eL = vec2(-0.046 * esp - iTilt * 0.012, -0.060 + iListen * 0.006);
+  vec2 eR = vec2( 0.046 * esp - iTilt * 0.006, -0.060 + iListen * 0.006);
   float et = iEyeTilt + iTilt * 0.28;
-  vec2 qL = rot(-et) * (pp - eyeL);
-  vec2 qR = rot(-et) * (pp - eyeR);
+  vec2 qL = rot(-et) * (p - eL);
+  vec2 qR = rot(-et) * (p - eR);
+  float op = max(iEyeOpen, 0.1);
+  float sL = exp(-(pow(qL.x * (12.0 / op), 2.0) + pow(qL.y * 36.0, 2.0)));
+  float sR = exp(-(pow(qR.x * (12.0 / op), 2.0) + pow(qR.y * 36.0, 2.0)));
+  float eyeVis = visor * 0.96;
+  body += vec3(0.55, 0.92, 1.0) * sL * eyeVis * (1.6 + iEncourage * 0.15);
+  body += vec3(0.55, 0.92, 1.0) * sR * eyeVis * (1.6 + iEncourage * 0.15);
+  float gL = exp(-(pow(qL.x * 5.0, 2.0) + pow(qL.y * 12.0, 2.0))) * 0.08;
+  float gR = exp(-(pow(qR.x * 5.0, 2.0) + pow(qR.y * 12.0, 2.0))) * 0.08;
+  body += vec3(0.32, 0.68, 0.88) * (gL + gR) * eyeVis;
 
-  // Tight horizontal slits: high x-scale = narrow, very high y-scale = thin
-  float openFactor = max(iEyeOpen, 0.1);
-  float sL = exp(-(pow(qL.x * (16.0 / openFactor), 2.0) + pow(qL.y * 48.0, 2.0)));
-  float sR = exp(-(pow(qR.x * (16.0 / openFactor), 2.0) + pow(qR.y * 48.0, 2.0)));
-
-  // Apply eyes only in the visor zone
-  body += vec3(0.40, 0.82, 0.96) * sL * visor * (1.0 + iEncourage * 0.12);
-  body += vec3(0.40, 0.82, 0.96) * sR * visor * (1.0 + iEncourage * 0.12);
-
-  // Subtle bloom around each eye
-  float bL = exp(-(pow(qL.x * 8.0, 2.0) + pow(qL.y * 18.0, 2.0))) * 0.04;
-  float bR = exp(-(pow(qR.x * 8.0, 2.0) + pow(qR.y * 18.0, 2.0))) * 0.04;
-  body += vec3(0.25, 0.60, 0.80) * (bL + bR) * visor;
-
-  // --- Composite ---
-  float bodyAlpha = innerMask * 0.97;
+  // --- Final composite ---
+  // Body fills the interior, rim overlays at the edge
+  float interiorMask = 1.0 - smoothstep(-0.002, 0.001, d + 0.006);
+  float bodyAlpha = interiorMask * 0.97;
   vec4 result = vec4(body * bodyAlpha, bodyAlpha);
 
-  // Glass rim on top
-  result.rgb += rimColor * rim * rimIntensity;
-  result.a = max(result.a, rim * 0.55);
+  // Add rim light on top -- ensure it's bright enough to be visible
+  float rimAlpha = clamp(rimTotal * 0.8, 0.0, 1.0) * outer;
+  result.rgb += rimLight * 1.5 * outer;
+  result.a = max(result.a, rimAlpha);
 
-  // Pearl highlight at crown
-  float pearl = exp(-(pp.x * pp.x * 24.0 + (pp.y + 0.24) * (pp.y + 0.24) * 85.0)) * outerMask;
-  result.rgb += vec3(0.88, 0.84, 0.98) * pearl * 0.32;
-
-  // Side edge specular
-  float ny = (pp.y + 0.02) / 0.26;
-  float edgeW = 0.18 + 0.04 * ny - 0.015 * ny * ny;
-  float sSpec = exp(-pow((abs(pp.x) - edgeW * 0.95) * 26.0, 2.0) - pow(pp.y * 2.8, 2.0)) * outerMask * 0.14;
-  result.rgb += rimColor * sSpec;
-
-  // Halo behind (only outside the body)
-  result.rgb += haloCol * halo * (1.0 - outerMask);
-  result.a = max(result.a, halo * 0.35 * (1.0 - outerMask));
+  // Halo behind (outside the form)
+  float behindMask = 1.0 - outer;
+  result.rgb += haloCol * haloStr * behindMask;
+  result.a = max(result.a, haloStr * 0.4 * behindMask);
 
   return result;
 }

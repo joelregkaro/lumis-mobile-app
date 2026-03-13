@@ -186,39 +186,79 @@ export default function CosmicBackground({ intensity = "full", children }: Props
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Layer 3: Very diffuse purple atmosphere */}
+      {/* Layer 3: Large diffuse purple nebula */}
       {isFull && (
         <View
           style={{
             position: "absolute",
-            width: SCREEN_W * 1.8,
-            height: SCREEN_H * 0.8,
-            borderRadius: SCREEN_W * 0.9,
-            backgroundColor: "#1a1050",
-            opacity: 0.18,
-            left: (SCREEN_W - SCREEN_W * 1.8) / 2,
-            top: SCREEN_H * 0.06,
+            width: SCREEN_W * 1.6,
+            height: SCREEN_H * 0.7,
+            borderRadius: SCREEN_W * 0.8,
+            backgroundColor: "#2a1860",
+            opacity: 0.26,
+            left: (SCREEN_W - SCREEN_W * 1.6) / 2,
+            top: SCREEN_H * 0.08,
           }}
         />
       )}
 
-      {/* Layer 4a: Soft central glow (no hard edge) */}
+      {/* Layer 4a: Primary central glow */}
       <View
         style={{
           position: "absolute",
           width: primaryGlowSize,
           height: primaryGlowSize,
           borderRadius: primaryGlowSize / 2,
-          backgroundColor: "#4A1A8A",
-          opacity: isFull ? 0.12 : 0.06,
+          backgroundColor: "#5C24B0",
+          opacity: isFull ? 0.22 : 0.10,
           left: (SCREEN_W - primaryGlowSize) / 2,
           top: SCREEN_H * 0.20,
-          shadowColor: "#5B2BAD",
+          shadowColor: "#7C3AED",
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.3,
-          shadowRadius: 140,
+          shadowOpacity: 0.5,
+          shadowRadius: 100,
         }}
       />
+
+      {/* Layer 4b: Warm golden nebula behind droplet */}
+      {isFull && (
+        <View
+          style={{
+            position: "absolute",
+            width: 260,
+            height: 260,
+            borderRadius: 130,
+            backgroundColor: "#5A3A10",
+            opacity: 0.14,
+            left: (SCREEN_W - 260) / 2,
+            top: SCREEN_H * 0.30,
+            shadowColor: "#FBBF24",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.35,
+            shadowRadius: 70,
+          }}
+        />
+      )}
+
+      {/* Layer 4c: Tight purple hotspot */}
+      {isFull && (
+        <View
+          style={{
+            position: "absolute",
+            width: 160,
+            height: 160,
+            borderRadius: 80,
+            backgroundColor: "#6B30C0",
+            opacity: 0.10,
+            left: (SCREEN_W - 160) / 2,
+            top: SCREEN_H * 0.33,
+            shadowColor: "#A78BFA",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.35,
+            shadowRadius: 45,
+          }}
+        />
+      )}
 
       {/* Layer 5: Gentle vignette */}
       <LinearGradient
