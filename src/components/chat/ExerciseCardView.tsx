@@ -1,15 +1,25 @@
-import { useState } from "react";
-import { View, Text, Pressable } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { Pressable, View, Text } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { hapticLight } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
+import { colors } from "@/constants/theme";
 import type { ExerciseCard } from "@/types/chat";
 
-const TYPE_CONFIG: Record<ExerciseCard["type"], { icon: string; color: string; bgColor: string }> = {
-  breathing: { icon: "🫁", color: "#2DD4BF", bgColor: "rgba(45,212,191,0.12)" },
-  grounding: { icon: "🌿", color: "#A78BFA", bgColor: "rgba(167,139,250,0.12)" },
-  reframe: { icon: "🔄", color: "#F59E0B", bgColor: "rgba(245,158,11,0.12)" },
-  journal: { icon: "📝", color: "#7DD3C0", bgColor: "rgba(125,211,192,0.12)" },
+const c = colors.dark;
+
+const TYPE_META: Record<string, { icon: string; color: string }> = {
+  breathing: { icon: "leaf-outline", color: c.brand.teal },
+  grounding: { icon: "earth-outline", color: "#A78BFA" },
+  reframe: { icon: "swap-horizontal-outline", color: c.brand.gold },
+  thought_record: { icon: "document-text-outline", color: c.brand.purple },
+  self_compassion: { icon: "heart-outline", color: "#E07373" },
+  gratitude: { icon: "sunny-outline", color: "#22C55E" },
+  body_scan: { icon: "body-outline", color: c.brand.teal },
+  muscle_relaxation: { icon: "fitness-outline", color: "#A78BFA" },
+  journal: { icon: "journal-outline", color: c.brand.purpleLight },
+  values: { icon: "compass-outline", color: c.brand.gold },
 };
 
 interface Props {
@@ -18,61 +28,58 @@ interface Props {
 
 export default function ExerciseCardView({ card }: Props) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
-  const config = TYPE_CONFIG[card.type];
+  const meta = TYPE_META[card.type] ?? { icon: "fitness-outline", color: c.brand.purple };
 
-  const handleTryIt = async () => {
+  const handlePress = async () => {
     await hapticLight();
-    if (card.type === "breathing" || card.type === "grounding") {
-      router.push("/sos");
-    }
+    track("exercise_card_tapped", { type: card.type, source: "chat" });
+    router.push({
+      pathname: "/exercise",
+      params: {
+        type: card.type,
+        title: card.title,
+        steps: card.steps ? JSON.stringify(card.steps) : undefined,
+      },
+    });
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(300)}>
+    <Animated.View entering={FadeInDown.delay(100).duration(300)}>
       <Pressable
-        onPress={() => {
-          setExpanded(!expanded);
-          hapticLight();
+        onPress={handlePress}
+        style={{
+          marginTop: 10,
+          backgroundColor: `${meta.color}10`,
+          borderRadius: 14,
+          padding: 14,
+          borderWidth: 1,
+          borderColor: `${meta.color}30`,
+          gap: 8,
         }}
-        style={{ backgroundColor: config.bgColor, borderColor: config.color, borderWidth: 1 }}
-        className="mt-sm rounded-xl p-md"
       >
-        <View className="flex-row items-center">
-          <Text className="mr-sm text-lg">{config.icon}</Text>
-          <View className="flex-1">
-            <Text className="text-body font-inter-semibold" style={{ color: config.color }}>
-              {card.title}
-            </Text>
-            <Text className="mt-xs text-small text-text-secondary">{card.description}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: `${meta.color}20`,
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <Ionicons name={meta.icon as any} size={16} color={meta.color} />
           </View>
-          {card.steps && card.steps.length > 0 && (
-            <Text className="text-text-tertiary">{expanded ? "▲" : "▼"}</Text>
-          )}
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: c.text.primary }}>{card.title}</Text>
+          </View>
+          <Ionicons name="arrow-forward-circle" size={22} color={meta.color} />
         </View>
-
-        {expanded && card.steps && card.steps.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(200)} className="mt-sm border-t pt-sm" style={{ borderColor: `${config.color}30` }}>
-            {card.steps.map((step, i) => (
-              <View key={i} className="mb-xs flex-row">
-                <Text className="mr-sm text-small" style={{ color: config.color }}>{i + 1}.</Text>
-                <Text className="flex-1 text-small text-text-primary">{step}</Text>
-              </View>
-            ))}
-
-            {(card.type === "breathing" || card.type === "grounding") && (
-              <Pressable
-                onPress={handleTryIt}
-                className="mt-sm items-center rounded-lg py-2"
-                style={{ backgroundColor: `${config.color}20` }}
-              >
-                <Text className="text-small font-inter-semibold" style={{ color: config.color }}>
-                  Try it now →
-                </Text>
-              </Pressable>
-            )}
-          </Animated.View>
-        )}
+        <Text style={{ fontSize: 13, color: c.text.secondary, lineHeight: 18 }}>
+          {card.description}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+          <Ionicons name="play-circle-outline" size={14} color={meta.color} />
+          <Text style={{ fontSize: 12, fontWeight: "600", color: meta.color }}>Try this exercise</Text>
+        </View>
       </Pressable>
     </Animated.View>
   );

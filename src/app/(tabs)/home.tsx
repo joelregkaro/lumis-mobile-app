@@ -6,7 +6,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getEvolutionTier } from "@/components/companion/CompanionAvatar";
+import { getEvolutionTier } from "@/components/companion/HeroDroplet";
+import CosmicBackground from "@/components/ui/CosmicBackground";
 import EchoCard from "@/components/echo/EchoCard";
 import AddHabitModal from "@/components/habits/AddHabitModal";
 import CompanionHeroCard from "@/components/home/CompanionHeroCard";
@@ -31,7 +32,9 @@ import {
   restoreExistingActivities,
 } from "@/lib/liveActivity";
 import { useMilestoneStore } from "@/store/milestones";
-import { colors } from "@/constants/theme";
+import { useCheckInStore, type PendingCheckIn } from "@/store/checkin";
+import { useToolkitStore, EXERCISE_CATALOG } from "@/store/toolkit";
+import { colors, bento, shadow } from "@/constants/theme";
 import type { Habit } from "@/types/database";
 
 const c = colors.dark;
@@ -119,6 +122,8 @@ export default function HomeScreen() {
   const { todaysCheckin, fetchToday: fetchDailyCheckin, setMorningIntention, fetchWeekHistory } = useDailyCheckinStore();
   const { todayCompletions, fetchHabits, fetchTodayCompletions, completeToday, uncompleteToday, isCompletedToday, todaysHabits, pauseHabit, archiveHabit, addReflection } = useHabitStore();
   const { latestScore, level, archetype, fetchLatestScore } = useHumanScoreStore();
+  const { pending: pendingCheckin, fetchPending: fetchPendingCheckin } = useCheckInStore();
+  const { suggested: toolkitSuggested, fetchSuggested: fetchToolkitSuggested } = useToolkitStore();
   const [moodLogged, setMoodLogged] = useState(false);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -151,7 +156,7 @@ export default function HomeScreen() {
         fetchGoals(), fetchRecentMoods(14), fetchStreak(),
         fetchWeeklyInsightCards(), fetchDailyCheckin(), fetchWeekHistory(),
         fetchHabits(), fetchTodayCompletions(), fetchLatestScore(),
-        fetchLatestSessionRecap(),
+        fetchLatestSessionRecap(), fetchPendingCheckin(), fetchToolkitSuggested(),
       ]);
     } catch (e) {
       console.warn("Failed to load some home data:", e);
@@ -264,21 +269,32 @@ export default function HomeScreen() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={["top"]}>
+    <View style={{ flex: 1 }}>
+    <CosmicBackground intensity="subtle" />
+    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.brand.purple} />}
       >
         {/* Header */}
-        <Animated.View entering={FadeIn.duration(400)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 16, marginBottom: 20 }}>
-          <Text style={{ fontSize: 28, fontWeight: "700", color: c.text.primary, letterSpacing: -0.5 }}>
+        <Animated.View entering={FadeIn.duration(400)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 16, marginBottom: 24 }}>
+          <Text style={{ fontSize: 32, fontWeight: "700", color: c.text.primary, letterSpacing: -0.5 }}>
             {greeting}
           </Text>
           <Pressable
             onPress={() => router.push("/(tabs)/me")}
-            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.bg.surface, alignItems: "center", justifyContent: "center" }}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 14,
+              backgroundColor: c.bg.surface,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: c.glass.border,
+            }}
             accessibilityLabel="Settings"
           >
             <Ionicons name="settings-outline" size={20} color={c.text.secondary} />
@@ -299,7 +315,15 @@ export default function HomeScreen() {
         {/* Celebration overlay */}
         {celebrationText && (
           <Animated.View entering={FadeIn.duration(200)} style={{ alignItems: "center", marginBottom: 16 }}>
-            <View style={{ backgroundColor: `${c.brand.gold}20`, borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14, borderWidth: 1, borderColor: `${c.brand.gold}40` }}>
+            <View style={{
+              backgroundColor: `${c.brand.gold}15`,
+              borderRadius: bento.radiusSm,
+              paddingHorizontal: 24,
+              paddingVertical: 14,
+              borderWidth: 1,
+              borderColor: `${c.brand.gold}30`,
+              ...shadow.glow,
+            }}>
               <Text style={{ fontSize: 16, fontWeight: "700", color: c.brand.gold, textAlign: "center" }}>{celebrationText}</Text>
             </View>
           </Animated.View>
@@ -308,11 +332,20 @@ export default function HomeScreen() {
         {/* Lapse compassionate prompt */}
         {showLapsePrompt && (
           <Animated.View entering={FadeInDown.duration(300)} style={{ marginBottom: 16 }}>
-            <View style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.status.crisis }}>
+            <View style={{
+              backgroundColor: c.bg.surface,
+              borderRadius: bento.radiusSm,
+              padding: bento.padding,
+              borderLeftWidth: 3,
+              borderLeftColor: c.status.crisis,
+              borderWidth: 1,
+              borderColor: c.glass.border,
+              ...shadow.card,
+            }}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary, marginBottom: 4 }}>
                 You missed "{showLapsePrompt.title}" yesterday
               </Text>
-              <Text style={{ fontSize: 13, color: c.text.secondary, marginBottom: 12, lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: c.text.secondaryLight, marginBottom: 12, lineHeight: 18 }}>
                 That's just data, not failure. What got in the way?
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -320,7 +353,7 @@ export default function HomeScreen() {
                   <Pressable
                     key={tag}
                     onPress={() => handleLapseTag(tag)}
-                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: `${c.status.crisis}15`, borderWidth: 1, borderColor: `${c.status.crisis}30` }}
+                    style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12, backgroundColor: `${c.status.crisis}12`, borderWidth: 1, borderColor: `${c.status.crisis}25` }}
                   >
                     <Text style={{ fontSize: 13, color: c.status.crisis, fontWeight: "500" }}>{tag}</Text>
                   </Pressable>
@@ -339,7 +372,7 @@ export default function HomeScreen() {
             <LinearGradient
               colors={[`${c.brand.purple}15`, `${c.brand.teal}10`]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 16, padding: 16, borderWidth: 1, borderColor: `${c.brand.purple}30` }}
+              style={{ borderRadius: bento.radius, padding: bento.padding, borderWidth: 1, borderColor: c.glass.border, ...shadow.card }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <View style={{ flex: 1, marginRight: 12 }}>
@@ -357,15 +390,68 @@ export default function HomeScreen() {
               <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 <Pressable
                   onPress={() => { router.push("/life-blueprint"); }}
-                  style={{ flex: 1, backgroundColor: c.brand.purple, borderRadius: 10, paddingVertical: 10, alignItems: "center" }}
+                  style={{ flex: 1, backgroundColor: c.brand.purple, borderRadius: bento.radiusSm, paddingVertical: 12, alignItems: "center", ...shadow.hero }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "600", color: "white" }}>View & Share</Text>
                 </Pressable>
-                <Pressable onPress={dismissBlueprintNudge} style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: c.bg.surface }}>
+                <Pressable onPress={dismissBlueprintNudge} style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: bento.radiusSm, backgroundColor: c.bg.surface, borderWidth: 1, borderColor: c.glass.border }}>
                   <Text style={{ fontSize: 13, fontWeight: "500", color: c.text.tertiary }}>Later</Text>
                 </Pressable>
               </View>
             </LinearGradient>
+          </Animated.View>
+        )}
+
+        {/* Pending check-in nudge */}
+        {pendingCheckin && (
+          <Animated.View entering={FadeInDown.delay(200).duration(400)} style={{ marginBottom: 16 }}>
+            <Pressable
+              onPress={async () => {
+                await hapticLight();
+                const p: Record<string, string> = { type: pendingCheckin.type };
+                if (pendingCheckin.id) p.id = pendingCheckin.id;
+                if (pendingCheckin.data) {
+                  for (const [k, v] of Object.entries(pendingCheckin.data)) {
+                    if (v == null) continue;
+                    if (typeof v === "string") p[k] = v;
+                    else if (typeof v === "number" || typeof v === "boolean") p[k] = String(v);
+                    else if (Array.isArray(v)) p[k] = JSON.stringify(v);
+                  }
+                }
+                router.push({ pathname: "/check-in", params: p });
+              }}
+              style={{
+                backgroundColor: c.bg.surface,
+                borderRadius: bento.radiusSm,
+                padding: bento.padding,
+                borderLeftWidth: 3,
+                borderLeftColor: c.brand.teal,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                borderWidth: 1,
+                borderColor: c.glass.border,
+                ...shadow.card,
+              }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${c.brand.teal}15`, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons
+                  name={
+                    pendingCheckin.type === "commitment_followup" ? "checkmark-circle-outline" :
+                    pendingCheckin.type === "morning_briefing" ? "sunny-outline" :
+                    pendingCheckin.type === "pattern_checkin" ? "git-network-outline" :
+                    "heart-outline"
+                  }
+                  size={20}
+                  color={c.brand.teal}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary }}>{pendingCheckin.title}</Text>
+                <Text style={{ fontSize: 13, color: c.text.secondary, marginTop: 2 }} numberOfLines={1}>{pendingCheckin.subtitle}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.text.tertiary} />
+            </Pressable>
           </Animated.View>
         )}
 
@@ -393,37 +479,55 @@ export default function HomeScreen() {
         {latestSessionRecap?.data && (
           <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ marginBottom: 24 }}>
             <View style={{
-              backgroundColor: "#16161D",
-              borderRadius: 16,
-              padding: 20,
+              backgroundColor: c.bg.surface,
+              borderRadius: bento.radius,
+              padding: bento.padding,
               borderWidth: 1,
-              borderColor: "#8B5CF630",
+              borderColor: c.glass.border,
+              ...shadow.card,
             }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Ionicons name="sparkles" size={16} color="#A78BFA" style={{ marginRight: 8 }} />
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#F4F4F5" }}>Session Recap</Text>
+                  <View style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    backgroundColor: `${c.brand.purple}15`,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 8,
+                  }}>
+                    <Ionicons name="sparkles" size={14} color={c.brand.purpleLight} />
+                  </View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: c.text.secondary, letterSpacing: 1.5, textTransform: "uppercase" }}>Session Recap</Text>
                 </View>
                 <Pressable onPress={() => dismissSessionRecap(latestSessionRecap.id)} hitSlop={12}>
-                  <Ionicons name="close" size={18} color="#71717A" />
+                  <Ionicons name="close" size={18} color={c.text.tertiary} />
                 </Pressable>
               </View>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#E4E4E7", marginBottom: 10 }}>
+              <Text style={{ fontSize: 17, fontWeight: "700", color: c.text.primary, marginBottom: 10, letterSpacing: -0.3 }}>
                 {latestSessionRecap.data.headline}
               </Text>
               {latestSessionRecap.data.key_takeaways?.length > 0 && (
-                <View style={{ marginBottom: 10 }}>
+                <View style={{ marginBottom: 12 }}>
                   {latestSessionRecap.data.key_takeaways.map((t: string, i: number) => (
-                    <Text key={i} style={{ fontSize: 13, color: "#A1A1AA", lineHeight: 19, marginBottom: 4 }}>
+                    <Text key={i} style={{ fontSize: 14, color: c.text.secondaryLight, lineHeight: 20, marginBottom: 4 }}>
                       {"\u2022"} {t}
                     </Text>
                   ))}
                 </View>
               )}
               {latestSessionRecap.data.wins?.length > 0 && (
-                <View style={{ backgroundColor: "#065F4610", borderRadius: 8, padding: 10, marginBottom: 10 }}>
+                <View style={{
+                  backgroundColor: `${c.status.success}10`,
+                  borderRadius: bento.radiusSm,
+                  padding: 12,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: `${c.status.success}15`,
+                }}>
                   {latestSessionRecap.data.wins.map((w: string, i: number) => (
-                    <Text key={i} style={{ fontSize: 13, color: "#34D399", lineHeight: 18 }}>
+                    <Text key={i} style={{ fontSize: 13, color: c.status.success, lineHeight: 18 }}>
                       {"\u2728"} {w}
                     </Text>
                   ))}
@@ -431,16 +535,16 @@ export default function HomeScreen() {
               )}
               {latestSessionRecap.data.next_steps?.length > 0 && (
                 <View style={{ marginBottom: 10 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#71717A", marginBottom: 4 }}>NEXT STEPS</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: c.text.tertiary, marginBottom: 6, letterSpacing: 1.5, textTransform: "uppercase" }}>Next Steps</Text>
                   {latestSessionRecap.data.next_steps.map((s: string, i: number) => (
-                    <Text key={i} style={{ fontSize: 13, color: "#D4D4D8", lineHeight: 18, marginBottom: 2 }}>
+                    <Text key={i} style={{ fontSize: 14, color: c.text.secondaryLight, lineHeight: 20, marginBottom: 3 }}>
                       {"\u2192"} {s}
                     </Text>
                   ))}
                 </View>
               )}
               {latestSessionRecap.data.closing_thought && (
-                <Text style={{ fontSize: 13, color: "#8B5CF6", fontStyle: "italic", lineHeight: 18, marginTop: 4 }}>
+                <Text style={{ fontSize: 13, color: c.brand.purpleLight, fontStyle: "italic", lineHeight: 18, marginTop: 4 }}>
                   "{latestSessionRecap.data.closing_thought}"
                 </Text>
               )}
@@ -477,7 +581,7 @@ export default function HomeScreen() {
                 colors={[c.gradient.start, c.gradient.end]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 16, padding: 16 }}
+                style={{ borderRadius: bento.radius, padding: bento.padding, ...shadow.hero }}
               >
                 {weeklyInsightCards[0].stat_value && (
                   <Text style={{ fontSize: 28, fontWeight: "800", color: "white" }}>
@@ -501,10 +605,19 @@ export default function HomeScreen() {
         {/* Weekly Insight */}
         {latestInsight && (
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={{ marginBottom: 24 }}>
-            <View style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.brand.teal }}>
+            <View style={{
+              backgroundColor: c.bg.surface,
+              borderRadius: bento.radiusSm,
+              padding: bento.padding,
+              borderLeftWidth: 3,
+              borderLeftColor: c.brand.teal,
+              borderWidth: 1,
+              borderColor: c.glass.border,
+              ...shadow.card,
+            }}>
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                <Ionicons name="bulb-outline" size={16} color={c.brand.gold} style={{ marginRight: 6 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: c.text.secondary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <Ionicons name="bulb-outline" size={14} color={c.brand.gold} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: c.text.secondary, letterSpacing: 1.5, textTransform: "uppercase" }}>
                   Weekly Insight
                 </Text>
               </View>
@@ -523,11 +636,20 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 24 }}>
             <Pressable
               onPress={() => router.push("/(tabs)/growth")}
-              style={{ backgroundColor: c.bg.surface, borderRadius: 16, padding: 16, borderLeftWidth: 3, borderLeftColor: c.brand.purple }}
+              style={{
+                backgroundColor: c.bg.surface,
+                borderRadius: bento.radiusSm,
+                padding: bento.padding,
+                borderLeftWidth: 3,
+                borderLeftColor: c.brand.purple,
+                borderWidth: 1,
+                borderColor: c.glass.border,
+                ...shadow.card,
+              }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                <Ionicons name="flag-outline" size={16} color={c.brand.purpleLight} style={{ marginRight: 6 }} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: c.text.secondary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <Ionicons name="flag-outline" size={14} color={c.brand.purpleLight} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: c.text.secondary, letterSpacing: 1.5, textTransform: "uppercase" }}>
                   Current Focus
                 </Text>
               </View>
@@ -553,15 +675,16 @@ export default function HomeScreen() {
               onPress={async () => { await hapticLight(); router.push("/evening-reflection"); }}
               style={{
                 backgroundColor: c.bg.surface,
-                borderRadius: 16,
-                padding: 16,
+                borderRadius: bento.radiusSm,
+                padding: bento.padding,
                 borderWidth: 1,
-                borderColor: `${c.brand.purpleLight}30`,
+                borderColor: c.glass.border,
                 flexDirection: "row",
                 alignItems: "center",
+                ...shadow.card,
               }}
             >
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${c.brand.purpleLight}15`, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${c.brand.purpleLight}15`, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
                 <Ionicons name="moon-outline" size={20} color={c.brand.purpleLight} />
               </View>
               <View style={{ flex: 1 }}>
@@ -572,6 +695,80 @@ export default function HomeScreen() {
             </Pressable>
           </Animated.View>
         )}
+
+        {/* Toolkit card — shows top AI suggestion or generic CTA */}
+        <Animated.View entering={FadeInDown.delay(350).duration(400)} style={{ marginBottom: 16 }}>
+          {toolkitSuggested.length > 0 ? (
+            <Pressable
+              onPress={async () => {
+                await hapticLight();
+                router.push({ pathname: "/exercise", params: { type: toolkitSuggested[0].type } });
+              }}
+              style={{
+                backgroundColor: c.bg.surface,
+                borderRadius: bento.radiusSm,
+                padding: bento.padding,
+                borderLeftWidth: 3,
+                borderLeftColor: (toolkitSuggested[0] as any).color ?? c.brand.teal,
+                gap: 10,
+                borderWidth: 1,
+                borderColor: c.glass.border,
+                ...shadow.card,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${(toolkitSuggested[0] as any).color ?? c.brand.teal}15`, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name={((toolkitSuggested[0] as any).icon ?? "fitness-outline") as any} size={20} color={(toolkitSuggested[0] as any).color ?? c.brand.teal} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary }}>{toolkitSuggested[0].title}</Text>
+                  <Text style={{ fontSize: 13, color: c.text.secondaryLight, marginTop: 2 }}>{(toolkitSuggested[0] as any).reason ?? toolkitSuggested[0].subtitle}</Text>
+                </View>
+                <Ionicons name="play-circle" size={28} color={(toolkitSuggested[0] as any).color ?? c.brand.teal} />
+              </View>
+              <Pressable
+                onPress={async (e) => {
+                  e.stopPropagation?.();
+                  await hapticLight();
+                  router.push("/toolkit" as any);
+                }}
+                style={{ alignSelf: "flex-end" }}
+                hitSlop={8}
+              >
+                <Text style={{ fontSize: 12, color: c.text.tertiary }}>See all exercises</Text>
+              </Pressable>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={async () => {
+                await hapticLight();
+                router.push("/toolkit" as any);
+              }}
+              style={{
+                backgroundColor: c.bg.surface,
+                borderRadius: bento.radiusSm,
+                padding: bento.padding,
+                borderLeftWidth: 3,
+                borderLeftColor: c.brand.teal,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                borderWidth: 1,
+                borderColor: c.glass.border,
+                ...shadow.card,
+              }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${c.brand.teal}15`, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="fitness-outline" size={20} color={c.brand.teal} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary }}>Therapeutic Toolkit</Text>
+                <Text style={{ fontSize: 13, color: c.text.secondaryLight, marginTop: 2 }}>Guided exercises for calm, clarity & growth</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.text.tertiary} />
+            </Pressable>
+          )}
+        </Animated.View>
 
         {/* Quick Actions */}
         <QuickActionsRow
@@ -589,5 +786,6 @@ export default function HomeScreen() {
         }}
       />
     </SafeAreaView>
+    </View>
   );
 }

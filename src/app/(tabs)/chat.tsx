@@ -17,7 +17,9 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 import QuickReplies from "@/components/chat/QuickReplies";
 import SessionCoolDown from "@/components/chat/SessionCoolDown";
 import FirstReadModal from "@/components/blueprint/FirstReadModal";
-import CompanionAvatar from "@/components/companion/CompanionAvatar";
+import HeroDroplet from "@/components/companion/HeroDroplet";
+import CosmicBackground from "@/components/ui/CosmicBackground";
+import GlassCard from "@/components/ui/GlassCard";
 import { useChatStore } from "@/store/chat";
 import { useSubscriptionStore } from "@/store/subscription";
 import { useAuthStore } from "@/store/auth";
@@ -33,9 +35,9 @@ const c = colors.dark;
 
 function getTimeGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
+  if (hour < 12) return "Good morning.";
+  if (hour < 17) return "Good afternoon.";
+  if (hour < 21) return "Good evening.";
   return "Late night?";
 }
 
@@ -64,12 +66,10 @@ export default function ChatScreen() {
   const [firstReadData, setFirstReadData] = useState<{ noticed: string[]; surprised_me: string; next_question: string } | null>(null);
   const [showFirstRead, setShowFirstRead] = useState(false);
 
-  // Check for First Read card after first session completes
   useEffect(() => {
     if (!completedSession || completedSession.sessionNumber !== 1) return;
     let cancelled = false;
     const checkFirstRead = async () => {
-      // Poll briefly — process-session may still be running
       for (let i = 0; i < 5; i++) {
         await new Promise((r) => setTimeout(r, 3000));
         if (cancelled) return;
@@ -199,234 +199,232 @@ export default function ChatScreen() {
   const canSend = inputText.trim().length > 0 && !isStreaming;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={["top"]}>
-      {/* Header — no back button, companion identity */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderBottomWidth: 0.5,
-          borderBottomColor: c.bg.surface,
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View style={{ marginRight: 10 }}>
-            <Animated.View style={[headerGlowStyle, { position: "absolute", width: 36, height: 36, borderRadius: 18, backgroundColor: `${c.brand.purple}30` }]} />
-            <CompanionAvatar size="small" expression={isStreaming ? "curious" : "warm"} />
-          </View>
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: c.text.primary }}>{companionName}</Text>
-            <Text style={{ fontSize: 11, color: c.text.tertiary, marginTop: 1 }}>
-              {isStreaming ? "typing..." : `Session ${sessionNumber}`}
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          onPress={() => {
-            track("sos_opened", { source: "chat" });
-            router.push("/sos");
-          }}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: c.bg.surface,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          accessibilityLabel="Emergency support"
-        >
-          <Ionicons name="shield-outline" size={18} color="#F472B6" />
-        </Pressable>
-      </View>
-
-      {!disclaimerDismissed && (
+    <View style={{ flex: 1 }}>
+      <CosmicBackground intensity="full" />
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        {/* Header */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: c.bg.surface,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            marginHorizontal: 12,
-            marginTop: 8,
-            borderRadius: 10,
+            justifyContent: "space-between",
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 0.5,
+            borderBottomColor: c.glass.border,
           }}
         >
-          <Text style={{ flex: 1, fontSize: 12, color: c.text.secondary, lineHeight: 16 }}>
-            Lumis is an AI life coach, not a licensed therapist. If you're in crisis, call{" "}
-            <Text style={{ fontWeight: "700", color: c.brand.purpleLight }}>988</Text>.
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ marginRight: 10 }}>
+              <Animated.View style={[headerGlowStyle, { position: "absolute", width: 36, height: 36, borderRadius: 18, backgroundColor: `${c.brand.purple}30` }]} />
+              <HeroDroplet size="small" state={isStreaming ? "thinking" : "idle"} />
+            </View>
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: c.text.primary }}>{companionName}</Text>
+              <Text style={{ fontSize: 11, color: c.text.tertiary, marginTop: 1 }}>
+                {isStreaming ? "typing..." : `Session ${sessionNumber}`}
+              </Text>
+            </View>
+          </View>
           <Pressable
-            onPress={() => setDisclaimerDismissed(true)}
-            hitSlop={8}
-            style={{ marginLeft: 10, padding: 2 }}
-            accessibilityLabel="Dismiss disclaimer"
+            onPress={() => {
+              track("sos_opened", { source: "chat" });
+              router.push("/sos");
+            }}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: c.glass.bg,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 0.5,
+              borderColor: c.glass.border,
+            }}
+            accessibilityLabel="Emergency support"
           >
-            <Ionicons name="close" size={14} color={c.text.secondary} />
+            <Ionicons name="shield-outline" size={18} color="#F472B6" />
           </Pressable>
         </View>
-      )}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        {completedSession && (
-          <SessionCoolDown session={completedSession} onDismiss={dismissCoolDown} />
-        )}
-
-        {/* Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, flexGrow: 1 }}
-          onContentSizeChange={handleContentSizeChange}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          onScroll={({ nativeEvent }) => {
-            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-            isAtBottomRef.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
-          }}
-          scrollEventThrottle={100}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40 }}>
-              <CompanionAvatar expression="warm" size="medium" />
-              <Text style={{ fontSize: 20, fontWeight: "600", color: c.text.primary, marginTop: 20 }}>
-                {isJournalMode ? "Journal Mode" : `${getTimeGreeting()}${displayName ? `, ${displayName}` : ""}`}
+        {!disclaimerDismissed && (
+          <GlassCard style={{ marginHorizontal: 12, marginTop: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ flex: 1, fontSize: 12, color: c.text.secondary, lineHeight: 16 }}>
+                Lumis is an AI life coach, not a licensed therapist. If you're in crisis, call{" "}
+                <Text style={{ fontWeight: "700", color: c.brand.purpleLight }}>988</Text>.
               </Text>
-              <Text style={{ fontSize: 15, color: c.text.secondary, textAlign: "center", marginTop: 8, lineHeight: 22 }}>
-                {isJournalMode
-                  ? "Write freely. I'll ask questions\nto help you explore your thoughts."
-                  : "What's on your mind?\nI'm here to listen."}
-              </Text>
-              {/* Contextual conversation starters */}
-              <View style={{ marginTop: 24, width: "100%", gap: 8, paddingHorizontal: 8 }}>
-                {contextualStarters.map((starter, i) => (
-                  <Animated.View key={starter} entering={FadeInDown.delay(200 + i * 80).duration(300)}>
-                    <Pressable
-                      onPress={() => handleStarterTap(starter)}
-                      style={{
-                        backgroundColor: c.bg.surface,
-                        borderRadius: 16,
-                        paddingHorizontal: 16,
-                        paddingVertical: 12,
-                        borderWidth: 1,
-                        borderColor: `${c.brand.purple}20`,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, color: c.text.primary }}>{starter}</Text>
-                    </Pressable>
-                  </Animated.View>
-                ))}
-              </View>
+              <Pressable
+                onPress={() => setDisclaimerDismissed(true)}
+                hitSlop={8}
+                style={{ marginLeft: 10, padding: 2 }}
+                accessibilityLabel="Dismiss disclaimer"
+              >
+                <Ionicons name="close" size={14} color={c.text.secondary} />
+              </Pressable>
             </View>
-          }
-          ListFooterComponent={
-            isStreaming && !lastMessage?.content ? <TypingIndicator /> : null
-          }
-        />
-
-        {/* Quick Replies */}
-        {quickReplies && quickReplies.length > 0 && !isStreaming && (
-          <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
+          </GlassCard>
         )}
 
-        {/* Input Bar */}
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            paddingBottom: Platform.OS === "ios" ? 4 : 8,
-            borderTopWidth: 0.5,
-            borderTopColor: c.bg.surface,
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
+          {completedSession && (
+            <SessionCoolDown session={completedSession} onDismiss={dismissCoolDown} />
+          )}
+
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, flexGrow: 1 }}
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            onScroll={({ nativeEvent }) => {
+              const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+              isAtBottomRef.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+            }}
+            scrollEventThrottle={100}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40 }}>
+                <HeroDroplet state="idle" size="large" />
+                <Text style={{ fontSize: 24, fontWeight: "700", color: c.text.primary, marginTop: 32, letterSpacing: -0.5 }}>
+                  {isJournalMode ? "Journal Mode" : getTimeGreeting()}
+                </Text>
+                <Text style={{ fontSize: 15, color: c.text.secondary, textAlign: "center", marginTop: 8, lineHeight: 22 }}>
+                  {isJournalMode
+                    ? "Write freely. I'll ask questions\nto help you explore your thoughts."
+                    : `How can I support your\nwell-being today${displayName ? `, ${displayName}` : ""}?`}
+                </Text>
+                <View style={{ marginTop: 32, width: "100%", gap: 10, paddingHorizontal: 8 }}>
+                  {contextualStarters.map((starter, i) => (
+                    <Animated.View key={starter} entering={FadeInDown.delay(200 + i * 80).duration(300)}>
+                      <Pressable
+                        onPress={() => handleStarterTap(starter)}
+                        style={{
+                          backgroundColor: "#161235",
+                          borderRadius: 16,
+                          paddingHorizontal: 16,
+                          paddingVertical: 12,
+                          borderWidth: 0.5,
+                          borderColor: "rgba(139, 92, 246, 0.15)",
+                        }}
+                      >
+                        <Text style={{ fontSize: 14, color: c.text.primary }}>{starter}</Text>
+                      </Pressable>
+                    </Animated.View>
+                  ))}
+                </View>
+              </View>
+            }
+            ListFooterComponent={
+              isStreaming && !lastMessage?.content ? <TypingIndicator /> : null
+            }
+          />
+
+          {quickReplies && quickReplies.length > 0 && !isStreaming && (
+            <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
+          )}
+
+          {/* Input Bar */}
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "flex-end",
-              backgroundColor: c.bg.surface,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: c.bg.elevated,
               paddingHorizontal: 16,
-              paddingVertical: 6,
+              paddingVertical: 8,
+              paddingBottom: Platform.OS === "ios" ? 70 : 74,
+              borderTopWidth: 0.5,
+              borderTopColor: c.glass.border,
             }}
           >
-            {!inputText.trim() && (
-              <Pressable
-                onPress={async () => {
-                  await hapticLight();
-                  router.push(isPro ? "/voice-chat" : "/paywall");
-                }}
+            <GlassCard style={{ borderRadius: 24 }}>
+              <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 4,
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  paddingHorizontal: 16,
+                  paddingVertical: 6,
                 }}
-                accessibilityLabel="Start voice session"
-                accessibilityRole="button"
               >
-                <Ionicons name="mic-outline" size={20} color={c.brand.purpleLight} />
-              </Pressable>
-            )}
-            <TextInput
-              style={{
-                flex: 1,
-                fontSize: 15,
-                color: c.text.primary,
-                maxHeight: 100,
-                minHeight: 36,
-                paddingTop: 8,
-                paddingBottom: 8,
-              }}
-              placeholder="Type a message..."
-              placeholderTextColor={c.text.tertiary}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              editable={!isStreaming}
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
-            />
-            <Pressable
-              onPress={handleSend}
-              disabled={!canSend}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: canSend ? c.brand.purple : c.bg.elevated,
-                alignItems: "center",
-                justifyContent: "center",
-                marginLeft: 8,
-                marginBottom: 2,
-              }}
-              accessibilityLabel="Send message"
-            >
-              <Ionicons name="arrow-up" size={18} color={canSend ? "white" : c.text.tertiary} />
-            </Pressable>
+                {!inputText.trim() && (
+                  <Pressable
+                    onPress={async () => {
+                      await hapticLight();
+                      router.push(isPro ? "/voice-chat" : "/paywall");
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 4,
+                    }}
+                    accessibilityLabel="Start voice session"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="mic-outline" size={20} color={c.brand.purpleLight} />
+                  </Pressable>
+                )}
+                <TextInput
+                  style={{
+                    flex: 1,
+                    fontSize: 15,
+                    color: c.text.primary,
+                    maxHeight: 100,
+                    minHeight: 36,
+                    paddingTop: 8,
+                    paddingBottom: 8,
+                  }}
+                  placeholder="Type a message..."
+                  placeholderTextColor={c.text.tertiary}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  editable={!isStreaming}
+                  onSubmitEditing={handleSend}
+                  blurOnSubmit={false}
+                />
+                <Pressable
+                  onPress={handleSend}
+                  disabled={!canSend}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: canSend ? c.brand.purple : c.bg.elevated,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: 8,
+                    marginBottom: 2,
+                  }}
+                  accessibilityLabel="Send message"
+                >
+                  <Ionicons name="arrow-up" size={18} color={canSend ? "white" : c.text.tertiary} />
+                </Pressable>
+              </View>
+            </GlassCard>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
 
-      {firstReadData && (
-        <FirstReadModal
-          visible={showFirstRead}
-          data={firstReadData}
-          onDismiss={() => setShowFirstRead(false)}
-        />
-      )}
-    </SafeAreaView>
+        {firstReadData && (
+          <FirstReadModal
+            visible={showFirstRead}
+            data={firstReadData}
+            onDismiss={() => setShowFirstRead(false)}
+          />
+        )}
+      </SafeAreaView>
+    </View>
   );
 }

@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { colors } from "@/constants/theme";
+import { colors, bento, shadow } from "@/constants/theme";
 
 const c = colors.dark;
 
@@ -27,19 +27,19 @@ export default function ProgressSnapshot({
   return (
     <Animated.View
       entering={FadeInDown.delay(200).duration(400)}
-      style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}
+      style={{ flexDirection: "row", gap: bento.gap, marginBottom: 24 }}
     >
-      {/* Streak */}
       <Pressable
         onPress={onGrowth}
         style={{
           flex: 1,
           backgroundColor: c.bg.surface,
-          borderRadius: 16,
-          padding: 14,
+          borderRadius: bento.radiusSm,
+          padding: bento.padding,
           alignItems: "center",
           borderWidth: 1,
-          borderColor: streak >= 7 ? `${c.brand.gold}40` : c.bg.border,
+          borderColor: streak >= 7 ? `${c.brand.gold}40` : c.glass.border,
+          ...shadow.card,
         }}
       >
         <Ionicons
@@ -47,31 +47,31 @@ export default function ProgressSnapshot({
           size={20}
           color={streak >= 7 ? c.brand.gold : c.status.crisis}
         />
-        <Text style={{ fontSize: 20, fontWeight: "800", color: c.text.primary, marginTop: 4 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: c.text.primary, marginTop: 6, letterSpacing: -0.5 }}>
           {streak}
         </Text>
-        <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: "500" }}>streak</Text>
+        <Text style={{ fontSize: 10, color: c.text.tertiary, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>streak</Text>
       </Pressable>
 
-      {/* Human Score */}
       <Pressable
         onPress={onHumanScore}
         style={{
           flex: 1,
           backgroundColor: c.bg.surface,
-          borderRadius: 16,
-          padding: 14,
+          borderRadius: bento.radiusSm,
+          padding: bento.padding,
           alignItems: "center",
           borderWidth: 1,
-          borderColor: `${c.brand.purple}30`,
+          borderColor: c.glass.border,
+          ...shadow.card,
         }}
       >
         <View
           style={{
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            borderWidth: 2,
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            borderWidth: 2.5,
             borderColor: c.brand.purple,
             alignItems: "center",
             justifyContent: "center",
@@ -81,23 +81,23 @@ export default function ProgressSnapshot({
             {humanScore ?? "?"}
           </Text>
         </View>
-        <Text style={{ fontSize: 12, fontWeight: "600", color: c.brand.purpleLight, marginTop: 4 }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", color: c.brand.purpleLight, marginTop: 6 }}>
           {humanScore ? archetype : "Discover"}
         </Text>
-        <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: "500" }}>score</Text>
+        <Text style={{ fontSize: 10, color: c.text.tertiary, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>score</Text>
       </Pressable>
 
-      {/* Mood Trend */}
       <Pressable
         onPress={onGrowth}
         style={{
           flex: 1,
           backgroundColor: c.bg.surface,
-          borderRadius: 16,
-          padding: 14,
+          borderRadius: bento.radiusSm,
+          padding: bento.padding,
           alignItems: "center",
           borderWidth: 1,
-          borderColor: c.bg.border,
+          borderColor: c.glass.border,
+          ...shadow.card,
         }}
       >
         <Ionicons
@@ -105,7 +105,7 @@ export default function ProgressSnapshot({
           size={20}
           color={moodTrend?.color ?? c.text.tertiary}
         />
-        <Text style={{ fontSize: 12, fontWeight: "600", color: moodTrend?.color ?? c.text.tertiary, marginTop: 4 }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", color: moodTrend?.color ?? c.text.tertiary, marginTop: 6 }}>
           {moodTrend
             ? moodTrend.icon === "trending-up"
               ? "Up"
@@ -114,7 +114,7 @@ export default function ProgressSnapshot({
                 : "Steady"
             : "—"}
         </Text>
-        <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: "500" }}>mood</Text>
+        <Text style={{ fontSize: 10, color: c.text.tertiary, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>mood</Text>
       </Pressable>
     </Animated.View>
   );

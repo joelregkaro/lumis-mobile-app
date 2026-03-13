@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeIn, Layout } from "react-native-reanimated";
 import MoodCheckIn from "@/components/mood/MoodCheckIn";
 import { SectionHeader } from "@/components/ui";
-import { colors } from "@/constants/theme";
+import { colors, bento, shadow } from "@/constants/theme";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { useMilestoneStore } from "@/store/milestones";
 import type { Habit } from "@/types/database";
@@ -81,19 +81,27 @@ export default function DailyRhythmSection({
         <Ionicons name="sunny-outline" size={16} color={c.brand.gold} style={{ marginRight: 6 }} />
         <Text
           style={{
-            fontSize: 12,
-            fontWeight: "600",
+            fontSize: 11,
+            fontWeight: "700",
             color: c.text.secondary,
-            letterSpacing: 0.5,
+            letterSpacing: 1.5,
             textTransform: "uppercase",
           }}
         >
           Daily Rhythm
         </Text>
         {!expanded && (
-          <Text style={{ fontSize: 12, color: c.text.tertiary, marginLeft: 8 }}>
-            {doneCount} done
-          </Text>
+          <View style={{
+            marginLeft: 8,
+            backgroundColor: c.bg.elevated,
+            borderRadius: 10,
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+          }}>
+            <Text style={{ fontSize: 11, color: c.text.secondaryLight, fontWeight: "600" }}>
+              {doneCount} done
+            </Text>
+          </View>
         )}
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
@@ -113,22 +121,23 @@ export default function DailyRhythmSection({
                   onPress={() => { setShowIntentionInput(true); hapticLight(); }}
                   style={{
                     backgroundColor: c.bg.surface,
-                    borderRadius: 16,
+                    borderRadius: bento.radiusSm,
                     padding: 16,
                     borderWidth: 1,
-                    borderColor: `${c.brand.purple}30`,
+                    borderColor: c.glass.border,
+                    ...shadow.card,
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <View
                       style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: `${c.brand.gold}20`,
+                        width: 36,
+                        height: 36,
+                        borderRadius: 12,
+                        backgroundColor: `${c.brand.gold}15`,
                         alignItems: "center",
                         justifyContent: "center",
-                        marginRight: 10,
+                        marginRight: 12,
                       }}
                     >
                       <Ionicons name="sunny-outline" size={18} color={c.brand.gold} />
@@ -149,10 +158,11 @@ export default function DailyRhythmSection({
                   <View
                     style={{
                       backgroundColor: c.bg.surface,
-                      borderRadius: 16,
-                      padding: 16,
+                      borderRadius: bento.radiusSm,
+                      padding: bento.padding,
                       borderWidth: 1,
-                      borderColor: `${c.brand.purple}40`,
+                      borderColor: c.glass.border,
+                      ...shadow.card,
                     }}
                   >
                     <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary, marginBottom: 12 }}>
@@ -187,10 +197,10 @@ export default function DailyRhythmSection({
                             alignItems: "center",
                             paddingHorizontal: 12,
                             paddingVertical: 7,
-                            borderRadius: 20,
+                            borderRadius: 12,
                             backgroundColor: intentionDomain === d.key ? `${c.brand.purple}20` : c.bg.primary,
                             borderWidth: 1,
-                            borderColor: intentionDomain === d.key ? `${c.brand.purple}60` : c.bg.border,
+                            borderColor: intentionDomain === d.key ? `${c.brand.purple}60` : c.glass.border,
                           }}
                         >
                           <Ionicons
@@ -202,7 +212,7 @@ export default function DailyRhythmSection({
                           <Text
                             style={{
                               fontSize: 13,
-                              color: intentionDomain === d.key ? c.brand.purpleLight : c.text.secondary,
+                              color: intentionDomain === d.key ? c.brand.purpleLight : c.text.secondaryLight,
                               fontWeight: "500",
                             }}
                           >
@@ -217,9 +227,10 @@ export default function DailyRhythmSection({
                       style={{
                         marginTop: 14,
                         backgroundColor: intentionText.trim() ? c.brand.purple : `${c.brand.purple}40`,
-                        borderRadius: 12,
-                        paddingVertical: 12,
+                        borderRadius: bento.radiusSm,
+                        paddingVertical: 13,
                         alignItems: "center",
+                        ...shadow.hero,
                       }}
                     >
                       <Text style={{ fontSize: 15, fontWeight: "600", color: "white" }}>
@@ -234,11 +245,12 @@ export default function DailyRhythmSection({
             <View
               style={{
                 backgroundColor: c.bg.surface,
-                borderRadius: 16,
+                borderRadius: bento.radiusSm,
                 padding: 14,
                 borderLeftWidth: 3,
                 borderLeftColor: c.brand.gold,
                 marginBottom: 12,
+                ...shadow.card,
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -251,16 +263,32 @@ export default function DailyRhythmSection({
           )}
 
           {/* Habits */}
-          <View style={{ backgroundColor: c.bg.surface, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8 }}>
+          <View style={{
+            backgroundColor: c.bg.surface,
+            borderRadius: bento.radiusSm,
+            overflow: "hidden",
+            marginBottom: 12,
+            borderWidth: 1,
+            borderColor: c.glass.border,
+            ...shadow.card,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
               <Ionicons name="refresh-outline" size={14} color={c.brand.teal} style={{ marginRight: 6 }} />
-              <Text style={{ fontSize: 11, fontWeight: "600", color: c.text.secondary, letterSpacing: 0.5, textTransform: "uppercase" }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: c.text.secondary, letterSpacing: 1.5, textTransform: "uppercase" }}>
                 Habits
               </Text>
               {habits.length > 0 && (
-                <Text style={{ fontSize: 11, color: c.text.tertiary, marginLeft: 6 }}>
-                  {completedCount}/{habits.length}
-                </Text>
+                <View style={{
+                  marginLeft: 8,
+                  backgroundColor: c.bg.elevated,
+                  borderRadius: 10,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                }}>
+                  <Text style={{ fontSize: 11, color: c.text.secondaryLight, fontWeight: "600" }}>
+                    {completedCount}/{habits.length}
+                  </Text>
+                </View>
               )}
               <View style={{ marginLeft: "auto", flexDirection: "row", gap: 8, alignItems: "center" }}>
                 {habits.length > 0 && (
@@ -271,9 +299,9 @@ export default function DailyRhythmSection({
                 <Pressable
                   onPress={onAddHabit}
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
                     backgroundColor: `${c.brand.teal}15`,
                     alignItems: "center",
                     justifyContent: "center",
@@ -284,7 +312,7 @@ export default function DailyRhythmSection({
               </View>
             </View>
             {habits.length === 0 ? (
-              <Pressable onPress={onAddHabit} style={{ padding: 16, alignItems: "center" }}>
+              <Pressable onPress={onAddHabit} style={{ padding: 20, alignItems: "center" }}>
                 <Text style={{ fontSize: 14, color: c.text.tertiary }}>
                   Tap + to add your first habit
                 </Text>
@@ -308,19 +336,19 @@ export default function DailyRhythmSection({
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      paddingHorizontal: 14,
-                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 13,
                       borderTopWidth: i > 0 ? 0.5 : 0,
-                      borderTopColor: c.bg.border,
+                      borderTopColor: c.glass.border,
                     }}
                   >
                     <View
                       style={{
                         width: 24,
                         height: 24,
-                        borderRadius: 12,
+                        borderRadius: 8,
                         borderWidth: 2,
-                        borderColor: completed ? c.brand.teal : `${c.bg.elevated}80`,
+                        borderColor: completed ? c.brand.teal : c.bg.elevated,
                         backgroundColor: completed ? `${c.brand.teal}20` : "transparent",
                         alignItems: "center",
                         justifyContent: "center",
@@ -362,15 +390,18 @@ export default function DailyRhythmSection({
                 flexDirection: "row",
                 alignItems: "center",
                 backgroundColor: c.bg.surface,
-                borderRadius: 16,
+                borderRadius: bento.radiusSm,
                 padding: 14,
+                borderWidth: 1,
+                borderColor: c.glass.border,
+                ...shadow.card,
               }}
             >
               <View
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
                   backgroundColor: `${c.brand.teal}20`,
                   alignItems: "center",
                   justifyContent: "center",

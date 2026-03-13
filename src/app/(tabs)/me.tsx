@@ -291,7 +291,7 @@ export default function MeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0D0D12" }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#7C3AED" />}
       >

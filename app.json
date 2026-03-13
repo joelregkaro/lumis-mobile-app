@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0C1120"
+      "backgroundColor": "#080B1A"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,12 +22,106 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSSupportsLiveActivities": true
+        "NSSupportsLiveActivities": true,
+        "NSUserTrackingUsageDescription": "This helps us understand how you found Lumis and improve your experience.",
+        "NSAdvertisingAttributionReportEndpoint": "https://appsflyer-skadnetwork.com/",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "238da6jt44.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "22mmun2rn5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ludvb6z3bs.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "su67r6k2v3.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "f7s53z58qe.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4pfyvq9l8r.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "tl55sbb4fm.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "9rd848q77k.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "c6k4g5qg8m.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "wzmmz9fp6w.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "qqp299437r.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "3sh42y64q3.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "f38h382jlk.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "av6w8kgt66.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "klf5c3l5u5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "424m5254lk.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ecpz2srf59.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "m8dbw4sv7c.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "578prtvx9j.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "uw77j35x4d.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "kbd757ywx3.skadnetwork"
+          }
+        ]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0C1120",
+        "backgroundColor": "#080B1A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -62,6 +156,18 @@
           "project": "lumis-app"
         }
       ],
+      [
+        "react-native-appsflyer",
+        {}
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "This helps us understand how you found Lumis and improve your experience."
+        }
+      ],
+      "react-native-appsflyer",
+      "expo-tracking-transparency"
     ],
     "experiments": {
       "typedRoutes": true

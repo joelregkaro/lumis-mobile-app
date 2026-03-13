@@ -50,6 +50,9 @@ import {
 import { registerPushToken } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { track } from "@/lib/analytics";
+import { AppsFlyerEvents } from "@/lib/appsflyer";
+import { sendTikTokEvent } from "@/lib/tiktok";
+import { capturePostHog } from "@/lib/posthog";
 import { colors } from "@/constants/theme";
 
 const c = colors.dark;
@@ -500,6 +503,9 @@ export default function OnboardingScreen() {
       setOnboarded(true);
       ob.reset();
       track("onboarding_completed", trackData);
+      capturePostHog("onboarding_completed", trackData);
+      AppsFlyerEvents.completeOnboarding();
+      if (user) sendTikTokEvent("CompleteOnboarding", user.id, user.email ?? undefined);
       router.replace("/(tabs)/chat");
     } catch (err: any) {
       console.error("[Onboarding] finish failed:", err?.message ?? err);

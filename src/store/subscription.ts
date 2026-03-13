@@ -8,6 +8,9 @@ import {
   hasActiveEntitlement,
 } from "@/lib/revenue";
 import { track } from "@/lib/analytics";
+import { AppsFlyerEvents } from "@/lib/appsflyer";
+import { sendTikTokEvent } from "@/lib/tiktok";
+import { capturePostHog, setPostHogPersonProperties } from "@/lib/posthog";
 
 interface SubscriptionState {
   isPro: boolean;
@@ -48,7 +51,24 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
       const result = await purchasePackage(pkg);
       const active = hasActiveEntitlement(result.customerInfo);
       set({ isPro: active, isLoading: false });
-      if (active) track("purchase_completed", { package_id: pkg?.identifier });
+      if (active) {
+        track("purchase_completed", { package_id: pkg?.identifier });
+        capturePostHog("purchase_completed", {
+          package_id: pkg?.identifier,
+          price: pkg?.product?.price,
+        });
+        setPostHogPersonProperties({ is_pro: true, plan: pkg?.identifier });
+        AppsFlyerEvents.subscribe(pkg?.identifier ?? "unknown", pkg?.product?.price ?? 0);
+        const { useAuthStore } = require("@/store/auth");
+        const user = useAuthStore.getState().user;
+        if (user) {
+          sendTikTokEvent("Subscribe", user.id, user.email ?? undefined, {
+            value: pkg?.product?.price ?? 0,
+            currency: "USD",
+            content_id: pkg?.identifier,
+          });
+        }
+      }
       return active;
     } catch (e: any) {
       set({ isLoading: false });

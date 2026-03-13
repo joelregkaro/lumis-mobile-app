@@ -12,6 +12,8 @@ import { registerPushToken, addNotificationResponseListener } from "@/lib/notifi
 import { useNetworkStatus } from "@/lib/offline";
 import { initSentry } from "@/lib/sentry";
 import { initAnalytics, identify } from "@/lib/analytics";
+import { initAppsFlyer, setAppsFlyerCustomerUserId } from "@/lib/appsflyer";
+import { initPostHog, identifyPostHog, capturePostHog } from "@/lib/posthog";
 
 initSentry();
 
@@ -28,6 +30,8 @@ function RootLayout() {
 
   useEffect(() => {
     initAnalytics();
+    initAppsFlyer();
+    initPostHog();
     initialize().then(() => {
       if (Platform.OS !== "web") {
         const SplashScreen = require("expo-splash-screen");
@@ -40,7 +44,12 @@ function RootLayout() {
     if (session) {
       registerPushToken().catch(() => {});
       initSubscription(user?.id).catch(() => {});
-      if (user?.id) identify(user.id, { email: user.email });
+      if (user?.id) {
+        identify(user.id, { email: user.email });
+        setAppsFlyerCustomerUserId(user.id);
+        identifyPostHog(user.id, { email: user.email });
+        capturePostHog("app_opened");
+      }
     } else if (!isLoading) {
       router.replace("/(auth)/sign-in");
     }
@@ -79,23 +88,50 @@ function RootLayout() {
       }
 
       switch (data.type) {
+        case "commitment_followup":
+          router.push({
+            pathname: "/check-in",
+            params: {
+              type: "commitment_followup",
+              id: data.echo_id ?? "",
+              action_item: data.action_item ?? "",
+              context: data.context ?? "",
+            },
+          });
+          break;
+        case "morning_briefing":
+        case "morning_intention":
+          router.push({
+            pathname: "/check-in",
+            params: {
+              type: "morning_briefing",
+              focus_summary: data.focus_summary ?? "",
+              companion_message: data.companion_message ?? "",
+              top_priorities: data.top_priorities ? JSON.stringify(data.top_priorities) : "[]",
+            },
+          });
+          break;
+        case "pattern_checkin":
+          router.push({
+            pathname: "/check-in",
+            params: {
+              type: "pattern_checkin",
+              id: data.pattern_id ?? "",
+              description: data.description ?? "",
+              pattern_type: data.pattern_type ?? "",
+            },
+          });
+          break;
         case "check_in":
         case "echo_reminder":
         case "ai_reminder":
-          router.push("/(tabs)/home");
-          break;
-        case "morning_intention":
-          router.push("/(tabs)/home");
+          router.push({
+            pathname: "/check-in",
+            params: { type: "general" },
+          });
           break;
         case "evening_reflection":
           router.push("/evening-reflection");
-          break;
-        case "commitment_followup":
-          if (data.echo_id) {
-            router.push({ pathname: "/commitment-response", params: { echoId: data.echo_id } });
-          } else {
-            router.push("/(tabs)/home");
-          }
           break;
         case "habit_reminder":
           router.push("/(tabs)/home");
@@ -107,7 +143,6 @@ function RootLayout() {
         case "absence_detection":
           router.push("/(tabs)/home");
           break;
-        case "pattern_checkin":
         case "goal_deadline":
           router.push("/(tabs)/growth");
           break;
@@ -140,7 +175,7 @@ function RootLayout() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0C1120" }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#080B1A" }}>
         <ActivityIndicator size="large" color="#7C3AED" />
       </View>
     );
@@ -173,7 +208,7 @@ function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#0C1120" },
+          contentStyle: { backgroundColor: "#080B1A" },
           animation: "fade",
         }}
       >
@@ -190,6 +225,9 @@ function RootLayout() {
         <Stack.Screen name="relationships" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="evening-reflection" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="commitment-response" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="check-in" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="exercise" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
+        <Stack.Screen name="toolkit" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="life-wheel" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="human-score" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />
         <Stack.Screen name="human-score-share" options={{ animation: "slide_from_bottom", presentation: "modal", gestureEnabled: true }} />

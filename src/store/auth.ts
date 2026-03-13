@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { track, identify, reset as resetAnalytics } from "@/lib/analytics";
+import { AppsFlyerEvents, setAppsFlyerCustomerUserId } from "@/lib/appsflyer";
+import { sendTikTokEvent } from "@/lib/tiktok";
+import { capturePostHog, identifyPostHog } from "@/lib/posthog";
 import type { User as AppUser } from "@/types/database";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -87,7 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (data.user) {
       set({ session: data.session, user: data.user });
       identify(data.user.id);
+      identifyPostHog(data.user.id, { email: data.user.email });
       track("sign_in", { method: "email" });
+      capturePostHog("sign_in", { method: "email" });
       await get().fetchProfile();
     }
   },
@@ -98,7 +103,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (data.user) {
       identify(data.user.id);
+      setAppsFlyerCustomerUserId(data.user.id);
+      identifyPostHog(data.user.id, { email });
       track("sign_up", { method: "email" });
+      capturePostHog("sign_up", { method: "email" });
+      AppsFlyerEvents.completeRegistration("email");
+      sendTikTokEvent("CompleteRegistration", data.user.id, email);
       const { error: profileError } = await supabase.from("users").upsert(
         {
           id: data.user.id,

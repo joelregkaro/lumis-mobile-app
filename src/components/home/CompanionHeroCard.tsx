@@ -1,8 +1,8 @@
 import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import CompanionAvatar, { type CompanionExpression, type EvolutionTier } from "@/components/companion/CompanionAvatar";
-import { colors } from "@/constants/theme";
+import HeroDroplet, { type CompanionExpression, type EvolutionTier } from "@/components/companion/HeroDroplet";
+import { colors, bento, shadow } from "@/constants/theme";
 
 const c = colors.dark;
 
@@ -30,17 +30,18 @@ export default function CompanionHeroCard({
       <Pressable
         onPress={onChat}
         style={{
-          backgroundColor: c.bg.surface,
-          borderRadius: 24,
-          padding: 28,
+          backgroundColor: "transparent",
+          borderRadius: bento.radius,
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 20,
           alignItems: "center",
-          borderWidth: 1,
-          borderColor: `${c.brand.purple}20`,
+          borderWidth: 0,
         }}
         accessibilityLabel={`Start a conversation with ${companionName}`}
         accessibilityRole="button"
       >
-        <CompanionAvatar
+        <HeroDroplet
           expression={companionExpression}
           size="large"
           tier={companionTier}
@@ -48,10 +49,10 @@ export default function CompanionHeroCard({
         />
         <Text
           style={{
-            fontSize: 13,
-            fontWeight: "600",
+            fontSize: 11,
+            fontWeight: "700",
             color: c.text.secondary,
-            letterSpacing: 0.5,
+            letterSpacing: 2,
             textTransform: "uppercase",
             marginTop: 16,
           }}
@@ -78,7 +79,8 @@ export default function CompanionHeroCard({
             backgroundColor: c.brand.purple,
             paddingHorizontal: 28,
             paddingVertical: 14,
-            borderRadius: 28,
+            borderRadius: bento.radiusSm,
+            ...shadow.hero,
           }}
         >
           <Ionicons name="chatbubble-outline" size={16} color="white" style={{ marginRight: 8 }} />
@@ -96,9 +98,10 @@ export default function CompanionHeroCard({
           marginTop: 10,
           paddingHorizontal: 24,
           paddingVertical: 12,
-          borderRadius: 28,
+          borderRadius: bento.radiusSm,
+          backgroundColor: c.bg.surface,
           borderWidth: 1,
-          borderColor: `${c.brand.purple}40`,
+          borderColor: c.glass.border,
         }}
         accessibilityLabel={`Start a voice session with ${companionName}`}
         accessibilityRole="button"
@@ -110,12 +113,12 @@ export default function CompanionHeroCard({
             style={{
               marginLeft: 8,
               backgroundColor: `${c.brand.purple}20`,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderRadius: 4,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 8,
             }}
           >
-            <Text style={{ fontSize: 10, fontWeight: "600", color: c.brand.purpleLight }}>PRO</Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: c.brand.purpleLight, letterSpacing: 0.5 }}>PRO</Text>
           </View>
         )}
       </Pressable>

@@ -10,8 +10,10 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
-import CompanionAvatar from "@/components/companion/CompanionAvatar";
-import { chatSpec } from "@/constants/theme";
+import HeroDroplet from "@/components/companion/HeroDroplet";
+import { chatSpec, colors } from "@/constants/theme";
+
+const c = colors.dark;
 
 function Dot({ delay }: { delay: number }) {
   const opacity = useSharedValue(0.3);
@@ -35,23 +37,29 @@ function Dot({ delay }: { delay: number }) {
   }));
 
   return (
-    <Animated.View style={style} className="mx-0.5 h-2 w-2 rounded-full bg-text-secondary" />
+    <Animated.View style={[style, { marginHorizontal: 2, height: 8, width: 8, borderRadius: 4, backgroundColor: c.text.secondary }]} />
   );
 }
 
 export default function TypingIndicator() {
   return (
-    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} className="mb-sm flex-row items-end" accessibilityLabel="Lumis is typing" accessibilityRole="text">
-      <View className="mr-sm">
-        <CompanionAvatar size="small" expression="curious" />
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 8 }} accessibilityLabel="Lumis is typing" accessibilityRole="text">
+      <View style={{ marginRight: 8 }}>
+        <HeroDroplet size="small" state="thinking" />
       </View>
       <View
-        className="flex-row items-center bg-bubble-ai px-4 py-3"
         style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: c.bubble.ai,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
           borderTopLeftRadius: chatSpec.aiBubbleRadius.topLeft,
           borderTopRightRadius: chatSpec.aiBubbleRadius.topRight,
           borderBottomLeftRadius: chatSpec.aiBubbleRadius.bottomLeft,
           borderBottomRightRadius: chatSpec.aiBubbleRadius.bottomRight,
+          borderWidth: 0.5,
+          borderColor: c.glass.border,
         }}
       >
         <Dot delay={0} />
