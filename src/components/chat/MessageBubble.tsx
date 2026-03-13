@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 import Animated, { FadeInUp, SlideInUp } from "react-native-reanimated";
 import Markdown from "react-native-markdown-display";
-import CompanionAvatar from "@/components/companion/CompanionAvatar";
+import HeroDroplet from "@/components/companion/HeroDroplet";
 import ExerciseCardView from "@/components/chat/ExerciseCardView";
 import { colors } from "@/constants/theme";
 import type { ChatMessage } from "@/types/chat";
@@ -53,7 +53,7 @@ export default function MessageBubble({ message, showAvatar = false }: Props) {
     >
       {!isUser && showAvatar && (
         <View style={{ marginRight: 8, marginTop: "auto" }}>
-          <CompanionAvatar size="small" expression="neutral" />
+          <HeroDroplet size="small" state="idle" />
         </View>
       )}
       {!isUser && !showAvatar && <View style={{ width: 40 }} />}
@@ -63,11 +63,13 @@ export default function MessageBubble({ message, showAvatar = false }: Props) {
           style={{
             paddingHorizontal: 14,
             paddingVertical: 10,
-            backgroundColor: isUser ? c.bubble.user : c.bg.surface,
+            backgroundColor: isUser ? c.bubble.user : c.bubble.ai,
             borderTopLeftRadius: isUser ? 18 : 4,
             borderTopRightRadius: isUser ? 4 : 18,
             borderBottomLeftRadius: 18,
             borderBottomRightRadius: 18,
+            borderWidth: isUser ? 0 : 0.5,
+            borderColor: isUser ? "transparent" : c.glass.border,
           }}
         >
           {isUser ? (

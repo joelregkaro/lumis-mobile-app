@@ -12,7 +12,7 @@ export interface ChatMessage {
 }
 
 export interface ExerciseCard {
-  type: "breathing" | "grounding" | "reframe" | "journal";
+  type: "breathing" | "grounding" | "reframe" | "journal" | "thought_record" | "body_scan" | "muscle_relaxation" | "gratitude" | "self_compassion" | "values";
   title: string;
   description: string;
   steps?: string[];

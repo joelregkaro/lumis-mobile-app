@@ -21,8 +21,9 @@ import Animated, {
   FadeInDown,
   FadeOut,
 } from "react-native-reanimated";
-import CompanionAvatar from "@/components/companion/CompanionAvatar";
-import type { CompanionExpression } from "@/components/companion/CompanionAvatar";
+import HeroDroplet from "@/components/companion/HeroDroplet";
+import type { MirrorState } from "@/components/companion/HeroDroplet";
+import CosmicBackground from "@/components/ui/CosmicBackground";
 import { useVoiceChatStore } from "@/store/voiceChat";
 import { useGeminiVoice } from "@/hooks/useGeminiVoice";
 import type { ToolCallResult } from "@/hooks/useGeminiVoice";
@@ -233,12 +234,11 @@ export default function VoiceChatScreen() {
     onToolCall: handleToolCall,
   });
 
-  // Derive companion expression from state
-  const expression: CompanionExpression = (() => {
-    if (storeStatus === "error") return "concerned";
-    if (isSpeaking) return "curious";
-    if (isConnected) return "warm";
-    return "neutral";
+  const mirrorState: MirrorState = (() => {
+    if (storeStatus === "error") return "idle";
+    if (isSpeaking) return "thinking";
+    if (isConnected) return "listening";
+    return "idle";
   })();
 
   // Status text
@@ -492,22 +492,22 @@ export default function VoiceChatScreen() {
             paddingHorizontal: 14,
             paddingVertical: 10,
             borderRadius: 16,
-            backgroundColor: isUser ? "#8B5CF620" : "#16161D",
-            borderWidth: 1,
-            borderColor: isUser ? "#8B5CF640" : "#27272A",
+            backgroundColor: isUser ? "rgba(139, 92, 246, 0.12)" : "rgba(18, 16, 40, 0.7)",
+            borderWidth: 0.5,
+            borderColor: isUser ? "rgba(139, 92, 246, 0.25)" : "rgba(139, 92, 246, 0.1)",
           }}
         >
           <Text
             style={{
               fontSize: 13,
               fontWeight: "600",
-              color: isUser ? "#A78BFA" : "#71717A",
+              color: isUser ? "#A78BFA" : "#9B97C0",
               marginBottom: 4,
             }}
           >
             {isUser ? "You" : companionName}
           </Text>
-          <Text style={{ fontSize: 14, color: "#E4E4E7", lineHeight: 20 }}>
+          <Text style={{ fontSize: 14, color: "#F0EEFF", lineHeight: 20 }}>
             {item.content}
           </Text>
         </Animated.View>
@@ -517,217 +517,207 @@ export default function VoiceChatScreen() {
   );
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#0D0D12" }}
-      edges={["top", "bottom"]}
-    >
-      {/* Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-        }}
-      >
-        <Pressable
-          onPress={confirmEndSession}
+    <View style={{ flex: 1 }}>
+      <CosmicBackground intensity="full" />
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        {/* Header */}
+        <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: "#16161D",
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 20,
+            paddingVertical: 12,
           }}
-          accessibilityLabel="End voice session"
-          accessibilityRole="button"
         >
-          <Ionicons name="close" size={20} color="#A1A1AA" />
-        </Pressable>
+          <Pressable
+            onPress={confirmEndSession}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "rgba(18, 16, 40, 0.75)",
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 0.5,
+              borderColor: "rgba(139, 92, 246, 0.1)",
+            }}
+            accessibilityLabel="End voice session"
+            accessibilityRole="button"
+          >
+            <Ionicons name="close" size={20} color="#9B97C0" />
+          </Pressable>
 
-        <View style={{ alignItems: "center" }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Ionicons
-              name="mic"
-              size={14}
-              color="#8B5CF6"
-              style={{ marginRight: 4 }}
-            />
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#F4F4F5" }}>
-              Voice Session
-            </Text>
-          </View>
-          <Text style={{ fontSize: 11, color: "#71717A", marginTop: 1 }}>
-            Session {sessionNumber}
-          </Text>
-        </View>
-
-        <View style={{ width: 36 }} />
-      </View>
-
-      {/* Timer */}
-      {isConnected && (
-        <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ fontSize: 13, color: "#52525B", fontFamily: "monospace" }}>
-            {formatTime(elapsed)}
-          </Text>
-        </Animated.View>
-      )}
-
-      {/* Companion Avatar + Status */}
-      <View style={{ alignItems: "center", paddingVertical: 32 }}>
-        <Animated.View style={pulseStyle}>
-          <CompanionAvatar
-            expression={expression}
-            size="large"
-            name={companionName}
-          />
-        </Animated.View>
-
-        <View style={{ marginTop: 20, minHeight: 24 }}>
-          {storeStatus === "connecting" ? (
+          <View style={{ alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <ActivityIndicator size="small" color="#8B5CF6" />
-              <Text style={{ fontSize: 14, color: "#71717A", marginLeft: 8 }}>
-                {statusText}
+              <Ionicons name="mic" size={14} color="#8B5CF6" style={{ marginRight: 4 }} />
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#F0EEFF" }}>
+                Voice Session
               </Text>
             </View>
-          ) : (
-            <Animated.Text
-              entering={FadeIn.duration(300)}
-              style={{
-                fontSize: 14,
-                color: storeStatus === "error" ? "#EF4444" : "#71717A",
-                textAlign: "center",
-              }}
-            >
-              {statusText}
-            </Animated.Text>
-          )}
+            <Text style={{ fontSize: 11, color: "#9B97C0", marginTop: 1 }}>
+              Session {sessionNumber}
+            </Text>
+          </View>
+
+          <View style={{ width: 36 }} />
         </View>
 
-        {storeMuted && isConnected && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(200)}
-            style={{
-              marginTop: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 4,
-              borderRadius: 12,
-              backgroundColor: "#78350F40",
-            }}
-          >
-            <Text style={{ fontSize: 12, color: "#FDE68A" }}>
-              Microphone muted
+        {/* Timer */}
+        {isConnected && (
+          <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: "center", marginBottom: 8 }}>
+            <Text style={{ fontSize: 13, color: "#5A5680", fontFamily: "monospace" }}>
+              {formatTime(elapsed)}
             </Text>
           </Animated.View>
         )}
-      </View>
 
-      {/* Transcript */}
-      <View style={{ flex: 1, marginHorizontal: 16 }}>
-        <FlatList
-          ref={flatListRef}
-          data={transcriptMessages}
-          renderItem={renderTranscriptItem}
-          keyExtractor={(_, index) => index.toString()}
-          contentContainerStyle={{ paddingBottom: 16 }}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            isConnected ? (
-              <View style={{ alignItems: "center", paddingTop: 24 }}>
-                <Text style={{ fontSize: 13, color: "#52525B", textAlign: "center" }}>
-                  Start speaking — {companionName} is listening
+        {/* Mirror Presence + Status */}
+        <View style={{ alignItems: "center", paddingVertical: 32 }}>
+          <Animated.View style={pulseStyle}>
+            <HeroDroplet state={mirrorState} size="large" />
+          </Animated.View>
+
+          <View style={{ marginTop: 20, minHeight: 24 }}>
+            {storeStatus === "connecting" ? (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <ActivityIndicator size="small" color="#8B5CF6" />
+                <Text style={{ fontSize: 14, color: "#9B97C0", marginLeft: 8 }}>
+                  {statusText}
                 </Text>
               </View>
-            ) : null
-          }
-        />
-      </View>
+            ) : (
+              <Animated.Text
+                entering={FadeIn.duration(300)}
+                style={{
+                  fontSize: 14,
+                  color: storeStatus === "error" ? "#EF4444" : "#9B97C0",
+                  textAlign: "center",
+                }}
+              >
+                {statusText}
+              </Animated.Text>
+            )}
+          </View>
 
-      {/* Bottom Controls */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-          paddingVertical: 20,
-          paddingHorizontal: 40,
-          gap: 40,
-        }}
-      >
-        {/* Mute Button */}
-        <Pressable
-          onPress={handleToggleMute}
-          disabled={!isConnected}
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: storeMuted ? "#78350F" : "#16161D",
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: storeMuted ? "#92400E" : "#27272A",
-            opacity: isConnected ? 1 : 0.4,
-          }}
-          accessibilityLabel={storeMuted ? "Unmute microphone" : "Mute microphone"}
-          accessibilityRole="button"
-        >
-          <Ionicons
-            name={storeMuted ? "mic-off" : "mic"}
-            size={24}
-            color={storeMuted ? "#FDE68A" : "#F4F4F5"}
-          />
-        </Pressable>
-
-        {/* End Session Button */}
-        <Pressable
-          onPress={confirmEndSession}
-          disabled={isEnding}
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: "#DC2626",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          accessibilityLabel="End voice session"
-          accessibilityRole="button"
-        >
-          {isEnding ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Ionicons name="call" size={28} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
+          {storeMuted && isConnected && (
+            <Animated.View
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(200)}
+              style={{
+                marginTop: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+                backgroundColor: "#78350F40",
+              }}
+            >
+              <Text style={{ fontSize: 12, color: "#FDE68A" }}>
+                Microphone muted
+              </Text>
+            </Animated.View>
           )}
-        </Pressable>
+        </View>
 
-        {/* SOS Button */}
-        <Pressable
-          onPress={() => {
-            hapticLight();
-            navigation.navigate("sos" as never);
-          }}
+        {/* Transcript */}
+        <View style={{ flex: 1, marginHorizontal: 16 }}>
+          <FlatList
+            ref={flatListRef}
+            data={transcriptMessages}
+            renderItem={renderTranscriptItem}
+            keyExtractor={(_, index) => index.toString()}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              isConnected ? (
+                <View style={{ alignItems: "center", paddingTop: 24 }}>
+                  <Text style={{ fontSize: 13, color: "#5A5680", textAlign: "center" }}>
+                    Start speaking — {companionName} is listening
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
+        </View>
+
+        {/* Bottom Controls */}
+        <View
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: "#16161D",
-            alignItems: "center",
+            flexDirection: "row",
             justifyContent: "center",
-            borderWidth: 1,
-            borderColor: "#27272A",
+            alignItems: "center",
+            paddingVertical: 20,
+            paddingHorizontal: 40,
+            gap: 40,
           }}
-          accessibilityLabel="Emergency support"
-          accessibilityRole="button"
         >
-          <Ionicons name="shield-outline" size={22} color="#F472B6" />
-        </Pressable>
-      </View>
-    </SafeAreaView>
+          <Pressable
+            onPress={handleToggleMute}
+            disabled={!isConnected}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: storeMuted ? "#78350F" : "rgba(18, 16, 40, 0.75)",
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 0.5,
+              borderColor: storeMuted ? "#92400E" : "rgba(139, 92, 246, 0.1)",
+              opacity: isConnected ? 1 : 0.4,
+            }}
+            accessibilityLabel={storeMuted ? "Unmute microphone" : "Mute microphone"}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={storeMuted ? "mic-off" : "mic"}
+              size={24}
+              color={storeMuted ? "#FDE68A" : "#F0EEFF"}
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={confirmEndSession}
+            disabled={isEnding}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: "#DC2626",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            accessibilityLabel="End voice session"
+            accessibilityRole="button"
+          >
+            {isEnding ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name="call" size={28} color="white" style={{ transform: [{ rotate: "135deg" }] }} />
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              hapticLight();
+              navigation.navigate("sos" as never);
+            }}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: "rgba(18, 16, 40, 0.75)",
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 0.5,
+              borderColor: "rgba(139, 92, 246, 0.1)",
+            }}
+            accessibilityLabel="Emergency support"
+            accessibilityRole="button"
+          >
+            <Ionicons name="shield-outline" size={22} color="#F472B6" />
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }

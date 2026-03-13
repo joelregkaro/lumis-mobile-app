@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -50,7 +51,11 @@ import {
 import { registerPushToken } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { track } from "@/lib/analytics";
+import { AppsFlyerEvents } from "@/lib/appsflyer";
+import { sendTikTokEvent } from "@/lib/tiktok";
+import { capturePostHog } from "@/lib/posthog";
 import { colors } from "@/constants/theme";
+import type { RootStackParamList } from "@/navigation/types";
 
 const c = colors.dark;
 const TOTAL_STEPS = 12;
@@ -347,7 +352,7 @@ function AiBubble({ text, delay = 0 }: { text: string; delay?: number }) {
 // --- Main Onboarding Screen ---
 
 export default function OnboardingScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, setOnboarded, fetchProfile } = useAuthStore();
   const ob = useOnboardingStore();
 
@@ -500,14 +505,20 @@ export default function OnboardingScreen() {
       setOnboarded(true);
       ob.reset();
       track("onboarding_completed", trackData);
-      navigation.reset({ index: 0, routes: [{ name: "Tabs" as never, params: { screen: "chat" } }] });
+      capturePostHog("onboarding_completed", trackData);
+      AppsFlyerEvents.completeOnboarding();
+      if (user) sendTikTokEvent("CompleteOnboarding", user.id, user.email ?? undefined);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Tabs" as never, params: { screen: "chat" } as never }],
+      });
     } catch (err: any) {
       console.error("[Onboarding] finish failed:", err?.message ?? err);
       Alert.alert("Something went wrong", "Couldn't save your preferences. Please try again.");
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, user, companionName, ob, fetchProfile, setOnboarded, router]);
+  }, [isSaving, user, companionName, ob, fetchProfile, setOnboarded, navigation]);
 
   const handleShareArchetype = useCallback(async () => {
     if (!archetypeShareRef.current?.capture) return;
@@ -1164,7 +1175,7 @@ export default function OnboardingScreen() {
                 </Text>
 
                 <Pressable
-                  onPress={() => navigation.navigate("Auth" as never, { screen: "sign-up" })}
+                  onPress={() => (navigation as any).navigate("Auth", { screen: "sign-up" })}
                   style={{
                     width: "100%",
                     backgroundColor: c.brand.purple,
@@ -1178,7 +1189,7 @@ export default function OnboardingScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => navigation.navigate("Auth" as never, { screen: "sign-in" })}
+                  onPress={() => (navigation as any).navigate("Auth", { screen: "sign-in" })}
                   style={{
                     width: "100%",
                     backgroundColor: c.bg.surface,

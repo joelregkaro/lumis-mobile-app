@@ -175,13 +175,6 @@ export default function LifeBlueprintScreen() {
     }
   }, [answers, domains]);
 
-  const handleStartJourney = useCallback(() => {
-    if (session) {
-      navigation.reset({ index: 0, routes: [{ name: "Tabs" as never, params: { screen: "home" } }] });
-    } else {
-      navigation.navigate("Auth" as never, { screen: "sign-up" });
-    }
-  }, [session, router]);
 
   const handleRetake = useCallback(() => {
     setPhase("quiz");
@@ -191,6 +184,17 @@ export default function LifeBlueprintScreen() {
     setResult(null);
   }, []);
 
+  const handleStartJourney = useCallback(() => {
+    if (session) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Tabs" as never, params: { screen: "home" as never } }],
+      });
+    } else {
+      navigation.navigate("Auth" as never, { screen: "sign-up" });
+    }
+  }, [session, navigation]);
+
   const goBack = useCallback(async () => {
     await hapticLight();
     if (currentQ > 0) {
@@ -198,7 +202,7 @@ export default function LifeBlueprintScreen() {
     } else {
       navigation.goBack();
     }
-  }, [currentQ, router]);
+  }, [currentQ, navigation]);
 
   if (phase === "loading") {
     return (

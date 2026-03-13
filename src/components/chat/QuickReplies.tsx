@@ -1,6 +1,9 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { Text, Pressable, ScrollView } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { hapticLight } from "@/lib/haptics";
+import { colors } from "@/constants/theme";
+
+const c = colors.dark;
 
 interface Props {
   replies: string[];
@@ -18,18 +21,25 @@ export default function QuickReplies({ replies, onSelect }: Props) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-      className="mb-sm"
+      style={{ marginBottom: 8 }}
     >
       {replies.map((reply, i) => (
         <Animated.View key={reply} entering={FadeInDown.delay(i * 50).duration(250)}>
           <Pressable
             onPress={() => handlePress(reply)}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-            className="rounded-full border border-brand-purple px-4 py-2"
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.7 : 1,
+              borderRadius: 9999,
+              borderWidth: 0.5,
+              borderColor: c.glass.border,
+              backgroundColor: c.glass.bg,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+            })}
             accessibilityRole="button"
             accessibilityLabel={reply}
           >
-            <Text className="text-body text-brand-purple-light">{reply}</Text>
+            <Text style={{ fontSize: 14, color: c.brand.purpleLight }}>{reply}</Text>
           </Pressable>
         </Animated.View>
       ))}

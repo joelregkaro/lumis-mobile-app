@@ -6,7 +6,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/constants/theme";
+import { colors, bento, shadow } from "@/constants/theme";
+
+const c = colors.dark;
 
 type CardVariant = "default" | "accent" | "gradient" | "interactive";
 
@@ -24,7 +26,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export default function Card({
   children,
   variant = "default",
-  accentColor = colors.dark.brand.purple,
+  accentColor = c.brand.purple,
   gradientColors,
   onPress,
   style,
@@ -44,7 +46,7 @@ export default function Card({
   };
 
   const baseStyle = {
-    borderRadius: 16,
+    borderRadius: bento.radiusSm,
     overflow: "hidden" as const,
   };
 
@@ -52,13 +54,14 @@ export default function Card({
     <View
       style={[
         {
-          padding: 16,
-          backgroundColor: colors.dark.bg.surface,
-          borderRadius: 16,
-          borderWidth: variant === "accent" ? 0 : 1,
-          borderColor: `${colors.dark.bg.elevated}60`,
+          padding: bento.padding,
+          backgroundColor: c.bg.surface,
+          borderRadius: bento.radiusSm,
+          borderWidth: 1,
+          borderColor: variant === "accent" ? "transparent" : c.glass.border,
           borderLeftWidth: variant === "accent" ? 3 : 1,
-          borderLeftColor: variant === "accent" ? accentColor : `${colors.dark.bg.elevated}60`,
+          borderLeftColor: variant === "accent" ? accentColor : c.glass.border,
+          ...shadow.card,
         },
         style,
       ]}
@@ -69,7 +72,7 @@ export default function Card({
           <Ionicons
             name="chevron-forward"
             size={16}
-            color={colors.dark.text.tertiary}
+            color={c.text.tertiary}
             style={{ marginLeft: 8 }}
           />
         </View>
@@ -82,12 +85,12 @@ export default function Card({
   if (variant === "gradient" && gradientColors) {
     const inner = (
       <LinearGradient
-        colors={[`${gradientColors[0]}25`, `${gradientColors[1]}15`, colors.dark.bg.surface]}
+        colors={[`${gradientColors[0]}25`, `${gradientColors[1]}15`, c.bg.surface]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
-          padding: 16,
-          borderRadius: 16,
+          padding: bento.padding,
+          borderRadius: bento.radiusSm,
           borderWidth: 1,
           borderColor: `${gradientColors[0]}30`,
         }}

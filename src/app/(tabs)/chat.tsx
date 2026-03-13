@@ -1,13 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { TabsParamList } from "@/navigation/types";
@@ -18,7 +10,9 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 import QuickReplies from "@/components/chat/QuickReplies";
 import SessionCoolDown from "@/components/chat/SessionCoolDown";
 import FirstReadModal from "@/components/blueprint/FirstReadModal";
-import CompanionAvatar from "@/components/companion/CompanionAvatar";
+import HeroDroplet from "@/components/companion/HeroDroplet";
+import CosmicBackground from "@/components/ui/CosmicBackground";
+import GlassCard from "@/components/ui/GlassCard";
 import { useChatStore } from "@/store/chat";
 import { useSubscriptionStore } from "@/store/subscription";
 import { useAuthStore } from "@/store/auth";
@@ -32,12 +26,203 @@ import type { ChatMessage } from "@/types/chat";
 
 const c = colors.dark;
 
+const HERO_QUICK_ACTIONS = [
+  { id: "clear_head", label: "Clear my head", message: "I want to clear my head." },
+  { id: "plan_today", label: "Plan today", message: "Help me plan my day." },
+  { id: "talk_it_through", label: "Talk it through", message: "I want to talk something through." },
+] as const;
+
+type HeroQuickActionId = (typeof HERO_QUICK_ACTIONS)[number]["id"];
+
 function getTimeGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
+  if (hour < 12) return "Good morning.";
+  if (hour < 17) return "Good afternoon.";
+  if (hour < 21) return "Good evening.";
   return "Late night?";
+}
+
+interface ChatHeroProps {
+  companionName: string;
+  displayName: string;
+  isStreaming: boolean;
+  sessionNumber: number;
+  headerGlowStyle: Record<string, unknown>;
+  isJournalMode: boolean;
+  onPrimaryCta: () => void;
+  onQuickActionPress: (id: HeroQuickActionId) => void;
+}
+
+function ChatHero({
+  companionName,
+  displayName,
+  isStreaming,
+  sessionNumber,
+  headerGlowStyle,
+  isJournalMode,
+  onPrimaryCta,
+  onQuickActionPress,
+}: ChatHeroProps) {
+  const greeting = isJournalMode ? "Journal Mode" : getTimeGreeting();
+
+  return (
+    <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, alignItems: "center" }}>
+      <View
+        style={{
+          alignSelf: "stretch",
+          backgroundColor: "rgba(31, 24, 72, 0.95)",
+          borderRadius: 24,
+          paddingHorizontal: 18,
+          paddingVertical: 14,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            color: c.text.primary,
+            letterSpacing: -0.2,
+            textAlign: "left",
+          }}
+        >
+          {isJournalMode ? "Good to see you." : greeting}
+        </Text>
+        <Text
+          style={{
+            fontSize: 15,
+            color: c.text.secondaryLight,
+            marginTop: 4,
+            lineHeight: 22,
+          }}
+        >
+          {isJournalMode
+            ? "How would you like to reflect today?"
+            : `How can I support your well-being today${displayName ? `, ${displayName}` : ""}?`}
+        </Text>
+      </View>
+
+      <View
+        style={{
+          marginTop: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 999,
+          backgroundColor: "rgba(18, 24, 48, 0.9)",
+          borderWidth: 1,
+          borderColor: c.glass.border,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          alignSelf: "flex-start",
+        }}
+      >
+        <View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: c.brand.teal,
+          }}
+        />
+        <Text style={{ fontSize: 12, color: c.text.secondaryLight }}>
+          Balanced {sessionNumber || 1}-day streak
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 28, alignItems: "center" }}>
+        <View
+          style={{
+            width: 96,
+            height: 96,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Animated.View
+            style={[
+              headerGlowStyle,
+              {
+                position: "absolute",
+                width: 96,
+                height: 96,
+                borderRadius: 48,
+                backgroundColor: c.cosmic.glow,
+              },
+            ]}
+          />
+          <HeroDroplet size="large" state={isStreaming ? "thinking" : "idle"} />
+        </View>
+        <Text
+          style={{
+            fontSize: 11,
+            color: c.text.secondary,
+            marginTop: 8,
+          }}
+        >
+          {companionName}
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={onPrimaryCta}
+        style={{
+          marginTop: 24,
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Take 5 minutes to find some calm"
+      >
+        <GlassCard
+          style={{
+            borderRadius: 999,
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            backgroundColor: "rgba(44, 33, 94, 0.95)",
+            borderColor: `${c.brand.purple}35`,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary }}>
+              Take 5 minutes to find some calm
+            </Text>
+            <Ionicons name="arrow-forward" size={18} color={c.brand.purpleLight} />
+          </View>
+        </GlassCard>
+      </Pressable>
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginTop: 16,
+          gap: 8,
+        }}
+      >
+        {HERO_QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.id}
+            onPress={() => onQuickActionPress(action.id)}
+            style={{
+              flex: 1,
+              backgroundColor: c.bg.surface,
+              borderRadius: 999,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderWidth: 1,
+              borderColor: c.glass.border,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
+          >
+            <Text style={{ fontSize: 14, fontWeight: "500", color: c.text.primary }}>{action.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export default function ChatScreen() {
@@ -66,12 +251,10 @@ export default function ChatScreen() {
   const [firstReadData, setFirstReadData] = useState<{ noticed: string[]; surprised_me: string; next_question: string } | null>(null);
   const [showFirstRead, setShowFirstRead] = useState(false);
 
-  // Check for First Read card after first session completes
   useEffect(() => {
     if (!completedSession || completedSession.sessionNumber !== 1) return;
     let cancelled = false;
     const checkFirstRead = async () => {
-      // Poll briefly — process-session may still be running
       for (let i = 0; i < 5; i++) {
         await new Promise((r) => setTimeout(r, 3000));
         if (cancelled) return;
@@ -98,6 +281,7 @@ export default function ChatScreen() {
   const displayName = profile?.display_name ?? "";
   const lastMessage = messages[messages.length - 1];
   const quickReplies = lastMessage?.quickReplies;
+  const hasMessages = messages.length > 0;
 
   const headerGlowOpacity = useSharedValue(0.4);
 
@@ -201,234 +385,197 @@ export default function ChatScreen() {
   const canSend = inputText.trim().length > 0 && !isStreaming;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={["top"]}>
-      {/* Header — no back button, companion identity */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderBottomWidth: 0.5,
-          borderBottomColor: c.bg.surface,
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View style={{ marginRight: 10 }}>
-            <Animated.View style={[headerGlowStyle, { position: "absolute", width: 36, height: 36, borderRadius: 18, backgroundColor: `${c.brand.purple}30` }]} />
-            <CompanionAvatar size="small" expression={isStreaming ? "curious" : "warm"} />
-          </View>
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: c.text.primary }}>{companionName}</Text>
-            <Text style={{ fontSize: 11, color: c.text.tertiary, marginTop: 1 }}>
-              {isStreaming ? "typing..." : `Session ${sessionNumber}`}
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          onPress={() => {
-            track("sos_opened", { source: "chat" });
-            navigation.navigate("sos" as never);
-          }}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: c.bg.surface,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          accessibilityLabel="Emergency support"
-        >
-          <Ionicons name="shield-outline" size={18} color="#F472B6" />
-        </Pressable>
-      </View>
-
-      {!disclaimerDismissed && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: c.bg.surface,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            marginHorizontal: 12,
-            marginTop: 8,
-            borderRadius: 10,
-          }}
-        >
-          <Text style={{ flex: 1, fontSize: 12, color: c.text.secondary, lineHeight: 16 }}>
-            Lumis is an AI life coach, not a licensed therapist. If you're in crisis, call{" "}
-            <Text style={{ fontWeight: "700", color: c.brand.purpleLight }}>988</Text>.
-          </Text>
-          <Pressable
-            onPress={() => setDisclaimerDismissed(true)}
-            hitSlop={8}
-            style={{ marginLeft: 10, padding: 2 }}
-            accessibilityLabel="Dismiss disclaimer"
-          >
-            <Ionicons name="close" size={14} color={c.text.secondary} />
-          </Pressable>
-        </View>
-      )}
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        {completedSession && (
-          <SessionCoolDown session={completedSession} onDismiss={dismissCoolDown} />
-        )}
-
-        {/* Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, flexGrow: 1 }}
-          onContentSizeChange={handleContentSizeChange}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          onScroll={({ nativeEvent }) => {
-            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-            isAtBottomRef.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
-          }}
-          scrollEventThrottle={100}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40 }}>
-              <CompanionAvatar expression="warm" size="medium" />
-              <Text style={{ fontSize: 20, fontWeight: "600", color: c.text.primary, marginTop: 20 }}>
-                {isJournalMode ? "Journal Mode" : `${getTimeGreeting()}${displayName ? `, ${displayName}` : ""}`}
+    <View style={{ flex: 1 }}>
+      <CosmicBackground intensity="full" />
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        {!disclaimerDismissed && (
+          <GlassCard style={{ marginHorizontal: 12, marginTop: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ flex: 1, fontSize: 12, color: c.text.secondary, lineHeight: 16 }}>
+                Lumis is an AI life coach, not a licensed therapist. If you're in crisis, call{" "}
+                <Text style={{ fontWeight: "700", color: c.brand.purpleLight }}>988</Text>.
               </Text>
-              <Text style={{ fontSize: 15, color: c.text.secondary, textAlign: "center", marginTop: 8, lineHeight: 22 }}>
-                {isJournalMode
-                  ? "Write freely. I'll ask questions\nto help you explore your thoughts."
-                  : "What's on your mind?\nI'm here to listen."}
-              </Text>
-              {/* Contextual conversation starters */}
-              <View style={{ marginTop: 24, width: "100%", gap: 8, paddingHorizontal: 8 }}>
-                {contextualStarters.map((starter, i) => (
-                  <Animated.View key={starter} entering={FadeInDown.delay(200 + i * 80).duration(300)}>
-                    <Pressable
-                      onPress={() => handleStarterTap(starter)}
-                      style={{
-                        backgroundColor: c.bg.surface,
-                        borderRadius: 16,
-                        paddingHorizontal: 16,
-                        paddingVertical: 12,
-                        borderWidth: 1,
-                        borderColor: `${c.brand.purple}20`,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, color: c.text.primary }}>{starter}</Text>
-                    </Pressable>
-                  </Animated.View>
-                ))}
-              </View>
+              <Pressable
+                onPress={() => setDisclaimerDismissed(true)}
+                hitSlop={8}
+                style={{ marginLeft: 10, padding: 2 }}
+                accessibilityLabel="Dismiss disclaimer"
+              >
+                <Ionicons name="close" size={14} color={c.text.secondary} />
+              </Pressable>
             </View>
-          }
-          ListFooterComponent={
-            isStreaming && !lastMessage?.content ? <TypingIndicator /> : null
-          }
-        />
-
-        {/* Quick Replies */}
-        {quickReplies && quickReplies.length > 0 && !isStreaming && (
-          <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
+          </GlassCard>
         )}
 
-        {/* Input Bar */}
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            paddingBottom: Platform.OS === "ios" ? 4 : 8,
-            borderTopWidth: 0.5,
-            borderTopColor: c.bg.surface,
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
+          <ChatHero
+            companionName={companionName}
+            displayName={displayName}
+            isStreaming={isStreaming}
+            sessionNumber={sessionNumber}
+            headerGlowStyle={headerGlowStyle}
+            isJournalMode={isJournalMode}
+            onPrimaryCta={async () => {
+              if (isStreaming) return;
+              await hapticLight();
+              track("chat_hero_primary_tap", { mode: isJournalMode ? "journal" : "chat" });
+              try {
+                await sendMessage(
+                  isJournalMode
+                    ? "I'd like a short journaling exercise to help me reflect."
+                    : "I'd like a 5-minute exercise to find some calm.",
+                  journalOpts,
+                );
+              } catch {
+                // handled by store
+              }
+            }}
+            onQuickActionPress={async (id) => {
+              if (isStreaming) return;
+              const action = HERO_QUICK_ACTIONS.find((a) => a.id === id);
+              if (!action) return;
+              await hapticLight();
+              track("chat_hero_quick_action_tap", { id, mode: isJournalMode ? "journal" : "chat" });
+              try {
+                await sendMessage(action.message, journalOpts);
+              } catch {
+                // handled by store
+              }
+            }}
+          />
+
+          {completedSession && (
+            <SessionCoolDown session={completedSession} onDismiss={dismissCoolDown} />
+          )}
+
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingTop: hasMessages ? 8 : 0,
+              paddingBottom: 8,
+              flexGrow: 1,
+            }}
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            onScroll={({ nativeEvent }) => {
+              const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+              isAtBottomRef.current = layoutMeasurement.height + contentOffset.y >= contentSize.height - 40;
+            }}
+            scrollEventThrottle={100}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={null}
+            ListFooterComponent={
+              isStreaming && !lastMessage?.content ? <TypingIndicator /> : null
+            }
+          />
+
+          {quickReplies && quickReplies.length > 0 && !isStreaming && (
+            <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
+          )}
+
+          {/* Input Bar */}
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "flex-end",
-              backgroundColor: c.bg.surface,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: c.bg.elevated,
               paddingHorizontal: 16,
-              paddingVertical: 6,
+              paddingVertical: 8,
+              paddingBottom: Platform.OS === "ios" ? 70 : 74,
+              borderTopWidth: 0.5,
+              borderTopColor: c.glass.border,
             }}
           >
-            {!inputText.trim() && (
-              <Pressable
-                onPress={async () => {
-                  await hapticLight();
-                  navigation.navigate((isPro ? "voice-chat" : "paywall") as never);
-                }}
+            <GlassCard style={{ borderRadius: 24 }}>
+              <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 4,
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  paddingHorizontal: 16,
+                  paddingVertical: 6,
                 }}
-                accessibilityLabel="Start voice session"
-                accessibilityRole="button"
               >
-                <Ionicons name="mic-outline" size={20} color={c.brand.purpleLight} />
-              </Pressable>
-            )}
-            <TextInput
-              style={{
-                flex: 1,
-                fontSize: 15,
-                color: c.text.primary,
-                maxHeight: 100,
-                minHeight: 36,
-                paddingTop: 8,
-                paddingBottom: 8,
-              }}
-              placeholder="Type a message..."
-              placeholderTextColor={c.text.tertiary}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              editable={!isStreaming}
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
-            />
-            <Pressable
-              onPress={handleSend}
-              disabled={!canSend}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: canSend ? c.brand.purple : c.bg.elevated,
-                alignItems: "center",
-                justifyContent: "center",
-                marginLeft: 8,
-                marginBottom: 2,
-              }}
-              accessibilityLabel="Send message"
-            >
-              <Ionicons name="arrow-up" size={18} color={canSend ? "white" : c.text.tertiary} />
-            </Pressable>
+                {!inputText.trim() && (
+                  <Pressable
+                    onPress={async () => {
+                      await hapticLight();
+                      navigation.navigate((isPro ? "voice-chat" : "paywall") as never);
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 4,
+                    }}
+                    accessibilityLabel="Start voice session"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="mic-outline" size={20} color={c.brand.purpleLight} />
+                  </Pressable>
+                )}
+                <TextInput
+                  style={{
+                    flex: 1,
+                    fontSize: 15,
+                    color: c.text.primary,
+                    maxHeight: 100,
+                    minHeight: 36,
+                    paddingTop: 8,
+                    paddingBottom: 8,
+                  }}
+                  placeholder="Type a message..."
+                  placeholderTextColor={c.text.tertiary}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  editable={!isStreaming}
+                  onSubmitEditing={handleSend}
+                  blurOnSubmit={false}
+                />
+                <Pressable
+                  onPress={handleSend}
+                  disabled={!canSend}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: canSend ? c.brand.purple : c.bg.elevated,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: 8,
+                    marginBottom: 2,
+                  }}
+                  accessibilityLabel="Send message"
+                >
+                  <Ionicons name="arrow-up" size={18} color={canSend ? "white" : c.text.tertiary} />
+                </Pressable>
+              </View>
+            </GlassCard>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
 
-      {firstReadData && (
-        <FirstReadModal
-          visible={showFirstRead}
-          data={firstReadData}
-          onDismiss={() => setShowFirstRead(false)}
-        />
-      )}
-    </SafeAreaView>
+        {firstReadData && (
+          <FirstReadModal
+            visible={showFirstRead}
+            data={firstReadData}
+            onDismiss={() => setShowFirstRead(false)}
+          />
+        )}
+      </SafeAreaView>
+    </View>
   );
 }

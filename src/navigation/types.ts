@@ -2,8 +2,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 export type RootStackParamList = {
   Index: undefined;
-  Tabs: undefined;
-  Auth: undefined;
+  Tabs: { screen: keyof TabsParamList } | undefined;
+  Auth: { screen: keyof AuthStackParamList } | undefined;
   Onboarding: undefined;
   sos: undefined;
   "warm-up": undefined;

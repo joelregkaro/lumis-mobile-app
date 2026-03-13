@@ -3,6 +3,9 @@ import { View, Text, Pressable } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { hapticLight } from "@/lib/haptics";
 import { useMoodStore } from "@/store/mood";
+import { colors, bento, shadow } from "@/constants/theme";
+
+const c = colors.dark;
 
 const MOODS = [
   { score: 2, emoji: "😔", label: "Struggling" },
@@ -37,62 +40,83 @@ export default function MoodCheckIn({ onComplete }: Props) {
   };
 
   return (
-    <View style={{ backgroundColor: "#1A1F35", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#242A4240" }}>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: "#EAEDF3", marginBottom: 16 }}>
+    <View style={{
+      backgroundColor: c.bg.surface,
+      borderRadius: bento.radiusSm,
+      padding: bento.padding,
+      borderWidth: 1,
+      borderColor: c.glass.border,
+      ...shadow.card,
+    }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: c.text.primary, marginBottom: 16 }}>
         How are you feeling?
       </Text>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        {MOODS.map((mood) => (
-          <Pressable key={mood.score} onPress={() => handleSelect(mood.score)} style={{ alignItems: "center" }} accessibilityLabel={`Mood: ${mood.label}`} accessibilityRole="button" accessibilityHint={`Set your mood to ${mood.label}`}>
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: selected === mood.score ? "#7C3AED20" : "transparent",
-                borderWidth: selected === mood.score ? 2 : 0,
-                borderColor: "#7C3AED",
-              }}
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+        {MOODS.map((mood) => {
+          const isSelected = selected === mood.score;
+          return (
+            <Pressable
+              key={mood.score}
+              onPress={() => handleSelect(mood.score)}
+              style={{ alignItems: "center", width: 56 }}
+              accessibilityLabel={`Mood: ${mood.label}`}
+              accessibilityRole="button"
+              accessibilityHint={`Set your mood to ${mood.label}`}
             >
-              <Text style={{ fontSize: 28 }}>{mood.emoji}</Text>
-            </View>
-            <Text style={{ fontSize: 11, color: selected === mood.score ? "#A78BFA" : "#5A6178", marginTop: 6, fontWeight: selected === mood.score ? "600" : "400" }}>
-              {mood.label}
-            </Text>
-          </Pressable>
-        ))}
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: bento.radiusSm,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isSelected ? `${c.brand.purple}25` : c.bg.primary,
+                  borderWidth: isSelected ? 2 : 1,
+                  borderColor: isSelected ? c.brand.purple : c.glass.border,
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>{mood.emoji}</Text>
+              </View>
+              <Text style={{
+                fontSize: 10,
+                color: isSelected ? c.brand.purpleLight : c.text.tertiary,
+                marginTop: 6,
+                fontWeight: isSelected ? "700" : "500",
+                letterSpacing: 0.3,
+              }}>
+                {mood.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {showSliders && (
         <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 20 }}>
-          {/* Energy */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: "#8B92A8" }}>Energy</Text>
-              <Text style={{ fontSize: 13, color: "#2DD4BF", fontWeight: "600" }}>{energy}/10</Text>
+              <Text style={{ fontSize: 13, color: c.text.secondary }}>Energy</Text>
+              <Text style={{ fontSize: 13, color: c.brand.teal, fontWeight: "600" }}>{energy}/10</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 3 }}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
                 <Pressable key={v} onPress={() => setEnergy(v)} style={{ flex: 1, paddingVertical: 8 }} accessibilityLabel={`Energy level ${v}`} accessibilityRole="button">
-                  <View style={{ height: 12, borderRadius: 6, backgroundColor: v <= energy ? "#14B8A6" : "#242A42" }} />
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: v <= energy ? c.brand.teal : c.bg.elevated }} />
                 </Pressable>
               ))}
             </View>
           </View>
 
-          {/* Anxiety */}
           <View style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: "#8B92A8" }}>Anxiety</Text>
-              <Text style={{ fontSize: 13, color: "#C084FC", fontWeight: "600" }}>{anxiety}/10</Text>
+              <Text style={{ fontSize: 13, color: c.text.secondary }}>Anxiety</Text>
+              <Text style={{ fontSize: 13, color: c.brand.purpleFaint, fontWeight: "600" }}>{anxiety}/10</Text>
             </View>
             <View style={{ flexDirection: "row", gap: 3 }}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
                 <Pressable key={v} onPress={() => setAnxiety(v)} style={{ flex: 1, paddingVertical: 8 }} accessibilityLabel={`Anxiety level ${v}`} accessibilityRole="button">
-                  <View style={{ height: 12, borderRadius: 6, backgroundColor: v <= anxiety ? "#A78BFA" : "#242A42" }} />
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: v <= anxiety ? c.brand.purpleLight : c.bg.elevated }} />
                 </Pressable>
               ))}
             </View>
@@ -102,9 +126,10 @@ export default function MoodCheckIn({ onComplete }: Props) {
             onPress={handleSubmit}
             style={{
               alignItems: "center",
-              borderRadius: 12,
-              paddingVertical: 12,
-              backgroundColor: "#7C3AED",
+              borderRadius: bento.radiusSm,
+              paddingVertical: 13,
+              backgroundColor: c.brand.purple,
+              ...shadow.hero,
             }}
             accessibilityLabel="Submit mood check-in"
             accessibilityRole="button"
